@@ -48,7 +48,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
       password: hashedPassword,
       firstName,
       lastName,
-      role: role || 'INTERN',
+      role: 'INTERN', // Enforce INTERN role for public self-registration
       department,
       position,
     },

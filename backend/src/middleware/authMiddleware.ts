@@ -35,8 +35,14 @@ export const protect = asyncHandler(async (
           role: true,
           department: true,
           position: true,
+          isActive: true,
         },
       });
+
+      if (!req.user || !req.user.isActive) {
+        res.status(401);
+        throw new Error('User account is deactivated or not found');
+      }
 
       next();
     } catch (error) {

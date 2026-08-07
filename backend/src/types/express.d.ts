@@ -9,6 +9,7 @@ declare namespace Express {
       role: string;
       department?: string | null;
       position?: string | null;
+      isActive: boolean;
     };
   }
 }
