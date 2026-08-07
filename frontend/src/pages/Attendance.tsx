@@ -71,18 +71,31 @@ const Attendance: React.FC = () => {
     fetchAttendance();
   }, []);
 
-  // Personalized Intern Contract Details
-  const totalProgramDays = currentUser?.totalProgramDays || 65;
+  // Personalized Intern Contract Details configured by Supervisor / Admin
+  const activeInternship = (currentUser as any)?.internships?.[0];
+  const programTitle = activeInternship?.title || currentUser?.position || 'Full-Stack Software Engineering Cohort';
+  const department = activeInternship?.department || currentUser?.department || 'Engineering';
+  const startDateStr = activeInternship?.startDate ? new Date(activeInternship.startDate).toISOString().split('T')[0] : '2026-06-01';
+  const endDateStr = activeInternship?.endDate ? new Date(activeInternship.endDate).toISOString().split('T')[0] : '2026-08-31';
+
+  const startMs = new Date(startDateStr).getTime();
+  const endMs = new Date(endDateStr).getTime();
+  const nowMs = new Date().getTime();
+
+  const totalProgramDays = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24))) || 65;
+  const elapsedDays = Math.min(totalProgramDays, Math.max(1, Math.round((nowMs - startMs) / (1000 * 60 * 60 * 24)))) || 1;
+  const presentDays = records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length || 1;
+  const totalHoursLogged = Math.round(records.reduce((acc, r) => acc + (r.workHours || 0), 0) * 10) / 10;
+
   const programDetails = {
-    title: 'Full-Stack Software Engineering Cohort',
-    department: currentUser?.department || 'Engineering',
-    startDate: '2026-06-01',
-    endDate: '2026-08-31',
-    totalProgramDays: totalProgramDays,
-    elapsedDays: Math.min(records.length || 1, totalProgramDays),
-    presentDays: records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length || 1,
-    lateDays: records.filter((r) => r.status === 'LATE').length,
-    totalHoursLogged: records.reduce((acc, r) => acc + (r.workHours || 0), 0),
+    title: programTitle,
+    department: department,
+    startDate: startDateStr,
+    endDate: endDateStr,
+    totalProgramDays,
+    elapsedDays,
+    presentDays,
+    totalHoursLogged,
   };
 
   const attendanceRate = Math.round((programDetails.presentDays / Math.max(1, programDetails.elapsedDays)) * 1000) / 10;
@@ -115,7 +128,7 @@ const Attendance: React.FC = () => {
         await apiService.post('/attendance/check-in', { notes: 'QR Kiosk Check-In' });
         message.success('Entrance Check-In Verified & Saved!');
       } else {
-        await apiService.post('/attendance/check-out');
+        await apiService.post('/attendance/check-out', { notes: todayWorkSummary });
         if (todayWorkSummary) {
           await apiService.post('/work-diary', {
             tasksDone: todayWorkSummary,

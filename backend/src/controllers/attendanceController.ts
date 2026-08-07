@@ -32,9 +32,7 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const now = new Date();
-  // Standard check-in time threshold (e.g., 9:30 AM is LATE)
-  const isLate = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 30);
-  const status = isLate ? 'LATE' : 'PRESENT';
+  const status = 'PRESENT';
 
   const attendance = await prisma.attendance.create({
     data: {

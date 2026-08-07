@@ -208,6 +208,18 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
       isActive: true,
       lastLogin: true,
       createdAt: true,
+      internships: {
+        select: {
+          id: true,
+          title: true,
+          department: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+        },
+        take: 1,
+        orderBy: { createdAt: 'desc' },
+      },
     },
   });
 

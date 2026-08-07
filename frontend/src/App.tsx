@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Layout, Menu, Badge, Popover, List, Typography, Space, Button, Tag } from 'antd';
 import {
   UserOutlined,
@@ -43,6 +43,12 @@ const { Text, Title } = Typography;
 const App: React.FC = () => {
   const { currentUser, loading, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
 
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -211,7 +217,7 @@ const App: React.FC = () => {
                 </Popover>
 
                 <button
-                  onClick={() => logout()}
+                  onClick={handleLogout}
                   style={{ background: 'none', border: 'none', color: '#1890ff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
                 >
                   Logout
