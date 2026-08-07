@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Table, Button, Tag, Space, Input, Select, Drawer, Typography, Rate, message, Avatar } from 'antd';
-import { SearchOutlined, CheckOutlined, CloseOutlined, EyeOutlined, FilePdfOutlined, StarOutlined } from '@ant-design/icons';
+import { SearchOutlined, CheckOutlined, CloseOutlined, EyeOutlined, FilePdfOutlined } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
 

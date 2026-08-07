@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, DatePicker, message, Typography, Badge, Progress } from 'antd';
-import { PlusOutlined, SearchOutlined, FilterOutlined, TeamOutlined, CalendarOutlined, SolutionOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, DatePicker, message, Typography, Progress } from 'antd';
+import { PlusOutlined, SearchOutlined, FilterOutlined, CalendarOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
 
 interface InternshipItem {
   id: string;

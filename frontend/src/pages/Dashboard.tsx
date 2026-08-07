@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, Avatar, Space, Button, Progress, Typography, Badge } from 'antd';
+import { Card, Row, Col, Table, Tag, Avatar, Space, Button, Progress, Typography } from 'antd';
 import {
-  UserOutlined,
   TeamOutlined,
   FileTextOutlined,
-  CheckCircleOutlined,
   ArrowUpOutlined,
   PlusOutlined,
-  FolderAddOutlined,
   TrophyOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
@@ -35,7 +32,7 @@ const APPLICATION_STATUS_DATA = [
 const Dashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     totalInterns: 32,
     activeInternships: 12,
     pendingApplications: 8,
