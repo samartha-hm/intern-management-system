@@ -25,7 +25,23 @@ const generateRefreshToken = (id: string) => {
 // @route   POST /api/auth/register
 // @access  Public
 export const register = asyncHandler(async (req: Request, res: Response) => {
-  const { email, password, firstName, lastName, role, department, position } = req.body;
+  const { email, password, firstName, lastName, department, position } = req.body;
+
+  if (!email || !password || !firstName || !lastName) {
+    res.status(400);
+    throw new Error('Please provide email, password, firstName, and lastName');
+  }
+
+  if (password.length < 8) {
+    res.status(400);
+    throw new Error('Password must be at least 8 characters long');
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    res.status(400);
+    throw new Error('Please provide a valid email address');
+  }
 
   // Check if user already exists
   const userExists = await prisma.user.findUnique({
@@ -84,10 +100,20 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    res.status(400);
+    throw new Error('Please provide email and password');
+  }
+
   // Check for user email
   const user = await prisma.user.findUnique({
     where: { email },
   });
+
+  if (user && !user.isActive) {
+    res.status(401);
+    throw new Error('Account is deactivated. Please contact your administrator.');
+  }
 
   if (user && (await bcrypt.compare(password, user.password))) {
     const token = generateToken(user.id);
