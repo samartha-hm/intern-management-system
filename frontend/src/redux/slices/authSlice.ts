@@ -32,7 +32,12 @@ const initialState: AuthState = {
   isAuthenticated: false,
 };
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const rawApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+let cleanApiUrl = rawApiUrl.trim().replace(/\/+$/, '');
+if (!cleanApiUrl.endsWith('/api')) {
+  cleanApiUrl = `${cleanApiUrl}/api`;
+}
+const API_URL = cleanApiUrl;
 
 // Async thunks
 export const login = createAsyncThunk(
