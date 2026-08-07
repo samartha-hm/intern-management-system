@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build output
+backend/dist/
+frontend/build/
+
+# Environment variables (NEVER push these!)
+.env
+.env.local
+.env.production
+.env.staging
+
+# IDE & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Prisma
+backend/prisma/*.db
+backend/prisma/migrations/
+
+# Testing
+coverage/
+
+# Docker volumes
+postgres_data/
+redis_data/
+
+# Misc
+.agents/

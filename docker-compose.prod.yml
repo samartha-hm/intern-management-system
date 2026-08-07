@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: intern_management_db_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: intern_management_prod
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-super_secure_production_password_123!}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: intern_management_redis_prod
+    restart: unless-stopped
+    volumes:
+      - redis_data_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: intern_management_backend_prod
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-super_secure_production_password_123!}@db:5432/intern_management_prod
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-your_super_secret_production_jwt_key_here}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+    ports:
+      - "5000:5000"
+
+  # Frontend React App (NGINX)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: intern_management_frontend_prod
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      # In a multi-container setup, API calls from the client's browser 
+      # need to reach the backend exposed on the host machine.
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:5000/api}
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:

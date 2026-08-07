@@ -1,0 +1,317 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  firstName     String
+  lastName      String
+  phone         String?
+  role          Role     @default(INTERN)
+  department    String?
+  position      String?
+  isActive      Boolean  @default(true)
+  lastLogin     DateTime?
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  mentoring            Internship[]   @relation("InternshipMentor")
+  internships          Internship[]   @relation("InternshipInterns")
+  applications         Application[]  @relation("ApplicationApplicant")
+  applicationsReviewed Application[]  @relation("ApplicationReviewer")
+  projects             Project[]
+  tasks                Task[]
+  evaluationsGiven     Evaluation[]   @relation("EvaluationsGiven")
+  evaluationsReceived  Evaluation[]   @relation("EvaluationsReceived")
+  documents            Document[]
+  attendance           Attendance[]   @relation("UserAttendance")
+  workDiaries          WorkDiary[]    @relation("UserWorkDiary")
+  notifications        Notification[] @relation("NotificationRecipient")
+  sentNotifications    Notification[] @relation("NotificationSender")
+
+  @@index([email])
+  @@index([role])
+}
+
+enum Role {
+  ADMIN
+  HR
+  MENTOR
+  INTERN
+}
+
+model Internship {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  department  String
+  mentorId    String
+  startDate   DateTime
+  endDate     DateTime
+  status      InternshipStatus @default(ACTIVE)
+  maxInterns  Int @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  mentor       User          @relation("InternshipMentor", fields: [mentorId], references: [id])
+  interns      User[]        @relation("InternshipInterns")
+  applications Application[]
+  projects     Project[]
+  evaluations  Evaluation[]
+
+  @@index([status])
+  @@index([department])
+}
+
+enum InternshipStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Application {
+  id          String   @id @default(uuid())
+  internshipId String
+  applicantId  String
+  status       ApplicationStatus @default(PENDING)
+  appliedAt    DateTime @default(now())
+  reviewedAt   DateTime?
+  reviewerId   String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  internship Internship @relation(fields: [internshipId], references: [id])
+  applicant  User       @relation("ApplicationApplicant", fields: [applicantId], references: [id])
+  reviewer   User?      @relation("ApplicationReviewer", fields: [reviewerId], references: [id])
+
+  @@index([status])
+  @@index([internshipId])
+  @@index([applicantId])
+}
+
+enum ApplicationStatus {
+  PENDING
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  internId    String
+  internshipId String?
+  status      ProjectStatus @default(PLANNED)
+  priority    Priority      @default(MEDIUM)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  intern      User      @relation(fields: [internId], references: [id])
+  internship  Internship? @relation(fields: [internshipId], references: [id])
+  tasks       Task[]
+
+  @@index([status])
+  @@index([internId])
+}
+
+enum ProjectStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  projectId   String
+  assignedTo  String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+  dueDate     DateTime?
+  estimatedHours Float?
+  actualHours   Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  project     Project   @relation(fields: [projectId], references: [id])
+  assignedToUser User? @relation(fields: [assignedTo], references: [id])
+
+  @@index([status])
+  @@index([projectId])
+  @@index([assignedTo])
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+model Evaluation {
+  id            String   @id @default(uuid())
+  internId      String
+  evaluatorId   String
+  internshipId  String?
+  periodStart   DateTime
+  periodEnd     DateTime
+  scores        Json
+  feedback      String?
+  strengths     String?
+  areasForImprovement String?
+  goalsNextPeriod String?
+  overallRating Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  intern        User      @relation("EvaluationsReceived", fields: [internId], references: [id])
+  evaluator     User      @relation("EvaluationsGiven", fields: [evaluatorId], references: [id])
+  internship    Internship? @relation(fields: [internshipId], references: [id])
+
+  @@index([internId])
+  @@index([evaluatorId])
+  @@index([internshipId])
+}
+
+model Document {
+  id          String   @id @default(uuid())
+  entityId    String
+  entityType  EntityType
+  fileName    String
+  fileUrl     String
+  fileType    String
+  fileSize    Int
+  uploadedBy  String
+  uploadedAt  DateTime @default(now())
+
+  // Relations
+  uploader    User      @relation(fields: [uploadedBy], references: [id])
+
+  @@index([entityId, entityType])
+}
+
+enum EntityType {
+  INTERN
+  INTERNSHIP
+  APPLICATION
+  PROJECT
+  USER
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  recipientId String
+  senderId    String?
+  type        NotificationType
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  relatedEntityId String?
+  relatedEntityType EntityType?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  recipient   User      @relation("NotificationRecipient", fields: [recipientId], references: [id])
+  sender      User?     @relation("NotificationSender", fields: [senderId], references: [id])
+
+  @@index([recipientId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  APPLICATION_STATUS
+  INTERNSHIP_ASSIGNMENT
+  TASK_ASSIGNED
+  TASK_DUE
+  EVALUATION_COMPLETED
+  SYSTEM_ANNOUNCEMENT
+  MESSAGE
+  REMINDER
+}
+
+model Attendance {
+  id           String           @id @default(uuid())
+  userId       String
+  date         DateTime         @default(now())
+  checkInTime  DateTime
+  checkOutTime DateTime?
+  status       AttendanceStatus @default(PRESENT)
+  workHours    Float?
+  notes        String?
+  approvedBy   String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user         User             @relation("UserAttendance", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  HALF_DAY
+  ABSENT
+  ON_LEAVE
+}
+
+model WorkDiary {
+  id           String           @id @default(uuid())
+  userId       String
+  date         DateTime         @default(now())
+  tasksDone    String
+  hoursSpent   Float
+  blockers     String?
+  learnings    String?
+  status       DiaryStatus      @default(SUBMITTED)
+  feedback     String?
+  reviewedBy   String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user         User             @relation("UserWorkDiary", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+}
+
+enum DiaryStatus {
+  SUBMITTED
+  REVIEWED
+  APPROVED
+}
