@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Card, Table, Tag, Typography, Alert } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Table, Tag, Typography, Alert, message } from 'antd';
 import { CalendarOutlined } from '@ant-design/icons';
+import apiService from '../services/apiService';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -15,40 +16,35 @@ interface ReadOnlyDiaryEntry {
   feedback?: string;
 }
 
-const SAMPLE_HISTORICAL_DIARIES: ReadOnlyDiaryEntry[] = [
-  {
-    id: '1',
-    date: '2026-08-06',
-    checkInTime: '09:15 AM',
-    checkOutTime: '05:30 PM',
-    workHours: 8.0,
-    workSummary: 'Refactored backend authentication middleware and added express type extensions for req.user.',
-    status: 'SUBMITTED',
-  },
-  {
-    id: '2',
-    date: '2026-08-05',
-    checkInTime: '09:42 AM',
-    checkOutTime: '05:30 PM',
-    workHours: 7.8,
-    workSummary: 'Integrated Ant Design v5 Card styles and responsive layout grids for dashboard widgets.',
-    status: 'APPROVED',
-    feedback: 'Great progress on UI polish! Keep up the good work.',
-  },
-  {
-    id: '3',
-    date: '2026-08-04',
-    checkInTime: '09:05 AM',
-    checkOutTime: '05:30 PM',
-    workHours: 8.4,
-    workSummary: 'Created API routes for document management and file upload limits with multer.',
-    status: 'APPROVED',
-    feedback: 'Clean route architecture.',
-  },
-];
-
 const WorkDiary: React.FC = () => {
-  const [diaries] = useState<ReadOnlyDiaryEntry[]>(SAMPLE_HISTORICAL_DIARIES);
+  const [diaries, setDiaries] = useState<ReadOnlyDiaryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchMyDiaries = async () => {
+    try {
+      setLoading(true);
+      const data = await apiService.get('/work-diary/my');
+      const mapped: ReadOnlyDiaryEntry[] = data.map((d: any) => ({
+        id: d.id,
+        date: d.date ? new Date(d.date).toISOString().split('T')[0] : '',
+        checkInTime: '09:00 AM',
+        checkOutTime: '05:00 PM',
+        workHours: d.hoursSpent || 8.0,
+        workSummary: d.tasksDone,
+        status: d.status,
+        feedback: d.feedback,
+      }));
+      setDiaries(mapped);
+    } catch (err: any) {
+      message.error(err.message || 'Failed to load work diaries');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMyDiaries();
+  }, []);
 
   const columns = [
     {
@@ -107,7 +103,7 @@ const WorkDiary: React.FC = () => {
       />
 
       <Card title="Submitted Work Summaries & Mentor Feedback" styles={{ body: { padding: 20 } }}>
-        <Table columns={columns} dataSource={diaries} rowKey="id" pagination={{ pageSize: 6 }} />
+        <Table columns={columns} dataSource={diaries} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
       </Card>
     </div>
   );

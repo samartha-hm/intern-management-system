@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Table, Tag, Space, Input, Select, Button, Typography, Avatar, message } from 'antd';
 import { SearchOutlined, CheckOutlined, ClockCircleOutlined, CheckSquareOutlined } from '@ant-design/icons';
+import apiService from '../services/apiService';
 
 const { Title, Text } = Typography;
 
@@ -16,35 +17,74 @@ interface AuditRecord {
   isVerified?: boolean;
 }
 
-const INITIAL_AUDIT_LOGS: AuditRecord[] = [
-  { id: '1', internName: 'John Doe', department: 'Engineering', date: '2026-08-06', checkIn: '09:15 AM', checkOut: null, workHours: null, status: 'PRESENT', isVerified: false },
-  { id: '2', internName: 'Alice Walker', department: 'Data Science', date: '2026-08-06', checkIn: '09:45 AM', checkOut: null, workHours: null, status: 'LATE', isVerified: false },
-  { id: '3', internName: 'Michael Chen', department: 'Product UI', date: '2026-08-06', checkIn: '09:05 AM', checkOut: null, workHours: null, status: 'PRESENT', isVerified: true },
-  { id: '4', internName: 'Emily Davis', department: 'DevOps', date: '2026-08-05', checkIn: '09:10 AM', checkOut: '05:30 PM', workHours: 8.3, status: 'PRESENT', isVerified: true },
-];
-
 const AttendanceReview: React.FC = () => {
-  const [logs, setLogs] = useState<AuditRecord[]>(INITIAL_AUDIT_LOGS);
+  const [logs, setLogs] = useState<AuditRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [deptFilter, setDeptFilter] = useState('ALL');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  const handleVerifySingle = (record: AuditRecord) => {
-    setLogs((prev) => prev.map((l) => (l.id === record.id ? { ...l, isVerified: true } : l)));
-    message.success(`Attendance record verified for ${record.internName}`);
+  const fetchAttendanceAudit = async () => {
+    try {
+      setLoading(true);
+      const data = await apiService.get('/attendance');
+      const mapped: AuditRecord[] = data.map((item: any) => ({
+        id: item.id,
+        internName: item.user ? `${item.user.firstName} ${item.user.lastName}` : 'Intern',
+        department: item.user ? item.user.department || 'Engineering' : 'General',
+        date: item.date ? new Date(item.date).toISOString().split('T')[0] : '',
+        checkIn: item.checkInTime ? new Date(item.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+        checkOut: item.checkOutTime ? new Date(item.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
+        workHours: item.workHours || null,
+        status: item.status,
+        isVerified: Boolean(item.approvedBy),
+      }));
+      setLogs(mapped);
+    } catch (err: any) {
+      message.error(err.message || 'Failed to load attendance audit logs');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleBulkVerify = () => {
-    if (selectedRowKeys.length === 0) return;
-    setLogs((prev) => prev.map((l) => (selectedRowKeys.includes(l.id) ? { ...l, isVerified: true } : l)));
-    message.success(`Successfully verified ${selectedRowKeys.length} attendance records!`);
-    setSelectedRowKeys([]);
+  useEffect(() => {
+    fetchAttendanceAudit();
+  }, []);
+
+  const handleVerifySingle = async (record: AuditRecord) => {
+    try {
+      await apiService.put(`/attendance/${record.id}/verify`);
+      setLogs((prev) => prev.map((l) => (l.id === record.id ? { ...l, isVerified: true } : l)));
+      message.success(`Attendance record verified for ${record.internName}`);
+    } catch (err: any) {
+      message.error(err.message || 'Failed to verify attendance');
+    }
   };
+
+  const handleBulkVerify = async () => {
+    if (selectedRowKeys.length === 0) return;
+    try {
+      await Promise.all(selectedRowKeys.map((id) => apiService.put(`/attendance/${id}/verify`)));
+      setLogs((prev) => prev.map((l) => (selectedRowKeys.includes(l.id) ? { ...l, isVerified: true } : l)));
+      message.success(`Successfully verified ${selectedRowKeys.length} attendance records!`);
+      setSelectedRowKeys([]);
+    } catch (err: any) {
+      message.error(err.message || 'Bulk verification failed');
+    }
+  };
+
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   const filtered = logs.filter((l) => {
     const matchesSearch = l.internName.toLowerCase().includes(searchText.toLowerCase());
     const matchesDept = deptFilter === 'ALL' || l.department === deptFilter;
-    return matchesSearch && matchesDept;
+    const matchesStatus =
+      statusFilter === 'ALL'
+        ? true
+        : statusFilter === 'UNVERIFIED'
+        ? !l.isVerified
+        : l.status === statusFilter;
+    return matchesSearch && matchesDept && matchesStatus;
   });
 
   const columns = [
@@ -134,13 +174,21 @@ const AttendanceReview: React.FC = () => {
             onChange={(e) => setSearchText(e.target.value)}
             allowClear
           />
-          <Select value={deptFilter} onChange={setDeptFilter} style={{ width: 160 }}>
-            <Select.Option value="ALL">All Departments</Select.Option>
-            <Select.Option value="Engineering">Engineering</Select.Option>
-            <Select.Option value="Data Science">Data Science</Select.Option>
-            <Select.Option value="Product UI">Product UI</Select.Option>
-            <Select.Option value="DevOps">DevOps</Select.Option>
-          </Select>
+          <Space>
+            <Select value={deptFilter} onChange={setDeptFilter} style={{ width: 160 }}>
+              <Select.Option value="ALL">All Departments</Select.Option>
+              <Select.Option value="Engineering">Engineering</Select.Option>
+              <Select.Option value="Data Science">Data Science</Select.Option>
+              <Select.Option value="Product UI">Product UI</Select.Option>
+              <Select.Option value="DevOps">DevOps</Select.Option>
+            </Select>
+            <Select value={statusFilter} onChange={setStatusFilter} style={{ width: 150 }}>
+              <Select.Option value="ALL">All Statuses</Select.Option>
+              <Select.Option value="UNVERIFIED">Unverified Only</Select.Option>
+              <Select.Option value="PRESENT">Present</Select.Option>
+              <Select.Option value="LATE">Late</Select.Option>
+            </Select>
+          </Space>
         </div>
 
         <Table
@@ -151,7 +199,8 @@ const AttendanceReview: React.FC = () => {
           columns={columns}
           dataSource={filtered}
           rowKey="id"
-          pagination={{ pageSize: 7 }}
+          loading={loading}
+          pagination={{ pageSize: 8 }}
         />
       </Card>
     </div>

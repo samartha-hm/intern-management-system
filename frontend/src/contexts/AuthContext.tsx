@@ -1,7 +1,15 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { selectCurrentUser, selectIsAuthenticated, selectAuthLoading, selectAuthError } from '../redux/slices/authSlice';
-import { login, logout } from '../redux/slices/authSlice';
+import {
+  selectCurrentUser,
+  selectIsAuthenticated,
+  selectAuthLoading,
+  selectAuthError,
+  selectAuthToken,
+  login,
+  logout,
+  fetchCurrentUser,
+} from '../redux/slices/authSlice';
 import type { AppDispatch } from '../redux/store';
 
 interface AuthContextType {
@@ -21,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const loading = useSelector(selectAuthLoading);
   const error = useSelector(selectAuthError);
+  const token = useSelector(selectAuthToken);
 
   const loginUser = async (email: string, password: string) => {
     await dispatch(login({ email, password })).unwrap();
@@ -30,15 +39,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await dispatch(logout()).unwrap();
   };
 
-  // Check for saved token on load
+  // Validate persisted token on mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      // In a real app, you would validate the token would come way when 1. set up relax.  });
- //  the user info from token or make an API call
-      // For now, we'll rely on redux-persist to handle this
+    if (token && !currentUser) {
+      // We have a persisted token but no user data — validate it
+      dispatch(fetchCurrentUser());
     }
-  }, []);
+  }, [dispatch, token, currentUser]);
 
   return (
     <AuthContext.Provider

@@ -28,7 +28,6 @@ const Register: React.FC = () => {
           password: values.password,
           firstName: values.firstName,
           lastName: values.lastName,
-          role: 'INTERN', // Registration is exclusively for Intern candidates. Other roles are provisioned by Admin/HR.
         })
       ).unwrap();
       message.success('Intern registration successful! You can now log in.');

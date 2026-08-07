@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, DatePicker, message, Typography, Progress } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, message, Typography, Progress } from 'antd';
 import { PlusOutlined, SearchOutlined, FilterOutlined, CalendarOutlined } from '@ant-design/icons';
+import apiService from '../services/apiService';
+import { useAuth } from '../contexts/AuthContext';
 
 const { Title, Text } = Typography;
 
@@ -9,6 +11,7 @@ interface InternshipItem {
   title: string;
   department: string;
   mentor: string;
+  mentorId?: string;
   startDate: string;
   endDate: string;
   status: 'ACTIVE' | 'DRAFT' | 'COMPLETED' | 'CANCELLED';
@@ -16,76 +19,71 @@ interface InternshipItem {
   maxInterns: number;
 }
 
-const INITIAL_DATA: InternshipItem[] = [
-  {
-    id: '1',
-    title: 'Full Stack Software Development',
-    department: 'Engineering',
-    mentor: 'Jane Smith',
-    startDate: '2026-06-01',
-    endDate: '2026-12-01',
-    status: 'ACTIVE',
-    internsCount: 4,
-    maxInterns: 5,
-  },
-  {
-    id: '2',
-    title: 'Data Science & ML Pipeline',
-    department: 'Data Science',
-    mentor: 'David Miller',
-    startDate: '2026-07-01',
-    endDate: '2026-12-31',
-    status: 'ACTIVE',
-    internsCount: 3,
-    maxInterns: 4,
-  },
-  {
-    id: '3',
-    title: 'Product UI/UX & Design System',
-    department: 'Product UI',
-    mentor: 'Sarah Connor',
-    startDate: '2026-08-01',
-    endDate: '2027-01-31',
-    status: 'DRAFT',
-    internsCount: 0,
-    maxInterns: 3,
-  },
-  {
-    id: '4',
-    title: 'DevOps & Cloud Infrastructure',
-    department: 'DevOps',
-    mentor: 'Alex Johnson',
-    startDate: '2026-01-01',
-    endDate: '2026-06-30',
-    status: 'COMPLETED',
-    internsCount: 2,
-    maxInterns: 2,
-  },
-];
-
 const Internships: React.FC = () => {
-  const [data, setData] = useState<InternshipItem[]>(INITIAL_DATA);
+  const { currentUser } = useAuth();
+  const [data, setData] = useState<InternshipItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
 
-  const handleCreate = (values: any) => {
-    const newProgram: InternshipItem = {
-      id: String(data.length + 1),
-      title: values.title,
-      department: values.department,
-      mentor: values.mentor || 'Assigned Lead',
-      startDate: values.dates ? values.dates[0].format('YYYY-MM-DD') : '2026-09-01',
-      endDate: values.dates ? values.dates[1].format('YYYY-MM-DD') : '2027-03-01',
-      status: 'ACTIVE',
-      internsCount: 0,
-      maxInterns: values.maxInterns || 3,
-    };
-    setData([newProgram, ...data]);
-    setIsModalOpen(false);
-    form.resetFields();
-    message.success('Internship program created successfully!');
+  const fetchInternships = async () => {
+    try {
+      setLoading(true);
+      const res = await apiService.get('/internships');
+      const mapped = res.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        department: item.department,
+        mentor: item.mentor ? `${item.mentor.firstName} ${item.mentor.lastName}` : 'Unassigned',
+        mentorId: item.mentorId,
+        startDate: item.startDate ? new Date(item.startDate).toISOString().split('T')[0] : '',
+        endDate: item.endDate ? new Date(item.endDate).toISOString().split('T')[0] : '',
+        status: item.status,
+        internsCount: item.interns ? item.interns.length : 0,
+        maxInterns: item.maxInterns || 5,
+      }));
+      setData(mapped);
+    } catch (err: any) {
+      message.error(err.message || 'Failed to load internships');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInternships();
+  }, []);
+
+  const handleCreate = async (values: any) => {
+    try {
+      await apiService.post('/internships', {
+        title: values.title,
+        description: values.description || values.title,
+        department: values.department,
+        mentorId: values.mentorId || currentUser?.id,
+        startDate: values.dates ? values.dates[0].toISOString() : new Date().toISOString(),
+        endDate: values.dates ? values.dates[1].toISOString() : new Date(Date.now() + 90 * 86400000).toISOString(),
+        maxInterns: values.maxInterns || 5,
+      });
+      message.success('Internship program created successfully!');
+      setIsModalOpen(false);
+      form.resetFields();
+      fetchInternships();
+    } catch (err: any) {
+      message.error(err.message || 'Failed to create internship program');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await apiService.delete(`/internships/${id}`);
+      message.success('Internship program deleted.');
+      fetchInternships();
+    } catch (err: any) {
+      message.error(err.message || 'Failed to delete internship');
+    }
   };
 
   const filteredData = data.filter((item) => {
@@ -154,7 +152,7 @@ const Internships: React.FC = () => {
           <Button size="small" type="link" onClick={() => message.info(`Viewing details for ${record.title}`)}>
             Manage
           </Button>
-          <Button size="small" type="text" danger onClick={() => setData(data.filter((d) => d.id !== record.id))}>
+          <Button size="small" type="text" danger onClick={() => handleDelete(record.id)}>
             Delete
           </Button>
         </Space>
@@ -199,7 +197,8 @@ const Internships: React.FC = () => {
           columns={columns}
           dataSource={filteredData}
           rowKey="id"
-          pagination={{ pageSize: 6 }}
+          loading={loading}
+          pagination={{ pageSize: 8 }}
         />
       </Card>
 

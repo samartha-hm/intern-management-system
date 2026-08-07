@@ -1,9 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import asyncHandler from 'express-async-handler';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prismaClient';
 import { protect, authorize } from '../middleware/authMiddleware';
-
-const prisma = new PrismaClient();
 
 // @desc    Get all applications
 // @route   GET /api/applications

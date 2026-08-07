@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Table, Tag, Space, Input, Button, Modal, Typography, Avatar, message, Form } from 'antd';
 import { SearchOutlined, CheckOutlined, MessageOutlined, CheckSquareOutlined } from '@ant-design/icons';
+import apiService from '../services/apiService';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -16,69 +17,77 @@ interface ReviewDiaryItem {
   feedback?: string;
 }
 
-const INITIAL_REVIEW_LOGS: ReviewDiaryItem[] = [
-  {
-    id: '1',
-    internName: 'John Doe',
-    department: 'Engineering',
-    date: '2026-08-06',
-    tasksDone: 'Refactored backend authentication middleware and added express type extensions for req.user.',
-    hoursSpent: 8.0,
-    status: 'SUBMITTED',
-  },
-  {
-    id: '2',
-    internName: 'Alice Walker',
-    department: 'Data Science',
-    date: '2026-08-06',
-    tasksDone: 'Cleaned CSV dataset, imputed missing features, and trained initial Random Forest baseline model.',
-    hoursSpent: 8.0,
-    status: 'SUBMITTED',
-  },
-  {
-    id: '3',
-    internName: 'Michael Chen',
-    department: 'Product UI',
-    date: '2026-08-05',
-    tasksDone: 'Implemented glassmorphic card themes and responsive Ant Design layout grids.',
-    hoursSpent: 8.0,
-    status: 'APPROVED',
-    feedback: 'Outstanding UI polish and component structure!',
-  },
-  {
-    id: '4',
-    internName: 'Emily Davis',
-    department: 'DevOps',
-    date: '2026-08-05',
-    tasksDone: 'Configured Docker container health checks and PostgreSQL connection pooling.',
-    hoursSpent: 8.0,
-    status: 'SUBMITTED',
-  },
-];
-
 const WorkDiaryReview: React.FC = () => {
-  const [logs, setLogs] = useState<ReviewDiaryItem[]>(INITIAL_REVIEW_LOGS);
+  const [logs, setLogs] = useState<ReviewDiaryItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<ReviewDiaryItem | null>(null);
   const [form] = Form.useForm();
 
-  const handleApproveSingle = (id: string, feedbackTxt?: string) => {
-    setLogs((prev) =>
-      prev.map((log) => (log.id === id ? { ...log, status: 'APPROVED', feedback: feedbackTxt || log.feedback || 'Approved.' } : log))
-    );
-    setSelectedEntry(null);
-    form.resetFields();
-    message.success('Work diary entry approved!');
+  const fetchWorkDiariesForReview = async () => {
+    try {
+      setLoading(true);
+      const data = await apiService.get('/work-diary');
+      const mapped: ReviewDiaryItem[] = data.map((d: any) => ({
+        id: d.id,
+        internName: d.user ? `${d.user.firstName} ${d.user.lastName}` : 'Intern',
+        department: d.user ? d.user.department || 'Engineering' : 'General',
+        date: d.date ? new Date(d.date).toISOString().split('T')[0] : '',
+        tasksDone: d.tasksDone,
+        hoursSpent: d.hoursSpent || 8.0,
+        status: d.status,
+        feedback: d.feedback,
+      }));
+      setLogs(mapped);
+    } catch (err: any) {
+      message.error(err.message || 'Failed to load work diaries');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleBulkApprove = () => {
+  useEffect(() => {
+    fetchWorkDiariesForReview();
+  }, []);
+
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
+  const handleApproveSingle = async (id: string, feedbackTxt?: string) => {
+    try {
+      await apiService.put(`/work-diary/${id}/review`, {
+        feedback: feedbackTxt || 'Approved by Mentor/Manager.',
+        status: 'APPROVED',
+      });
+      setLogs((prev) =>
+        prev.map((log) => (log.id === id ? { ...log, status: 'APPROVED', feedback: feedbackTxt || 'Approved.' } : log))
+      );
+      setSelectedEntry(null);
+      form.resetFields();
+      message.success('Work diary entry approved!');
+    } catch (err: any) {
+      message.error(err.message || 'Failed to approve work diary');
+    }
+  };
+
+  const handleBulkApprove = async () => {
     if (selectedRowKeys.length === 0) return;
-    setLogs((prev) =>
-      prev.map((log) => (selectedRowKeys.includes(log.id) ? { ...log, status: 'APPROVED', feedback: log.feedback || 'Bulk Approved by Manager.' } : log))
-    );
-    message.success(`Successfully bulk approved ${selectedRowKeys.length} work diary entries!`);
-    setSelectedRowKeys([]);
+    try {
+      await Promise.all(
+        selectedRowKeys.map((id) =>
+          apiService.put(`/work-diary/${id}/review`, {
+            feedback: 'Bulk Approved by Manager.',
+            status: 'APPROVED',
+          })
+        )
+      );
+      setLogs((prev) =>
+        prev.map((log) => (selectedRowKeys.includes(log.id) ? { ...log, status: 'APPROVED', feedback: 'Bulk Approved by Manager.' } : log))
+      );
+      message.success(`Successfully bulk approved ${selectedRowKeys.length} work diary entries!`);
+      setSelectedRowKeys([]);
+    } catch (err: any) {
+      message.error(err.message || 'Bulk approval failed');
+    }
   };
 
   const filtered = logs.filter((l) => l.internName.toLowerCase().includes(searchText.toLowerCase()) || l.tasksDone.toLowerCase().includes(searchText.toLowerCase()));
@@ -171,7 +180,8 @@ const WorkDiaryReview: React.FC = () => {
           columns={columns}
           dataSource={filtered}
           rowKey="id"
-          pagination={{ pageSize: 6 }}
+          loading={loading}
+          pagination={{ pageSize: 8 }}
         />
       </Card>
 

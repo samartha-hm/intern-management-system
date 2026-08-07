@@ -16,6 +16,7 @@ import documentRoutes from './routes/documentRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import attendanceRoutes from './routes/attendanceRoutes';
 import workDiaryRoutes from './routes/workDiaryRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -32,9 +33,9 @@ app.use(cookieParser());
 // Security headers
 app.use(helmet());
 
-// CORS
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:3001',
+  process.env.FRONTEND_URL || 'https://intern-management-system-beta.vercel.app',
+  'https://intern-management-system-beta.vercel.app',
   'http://localhost:3000',
   'http://localhost:3001',
 ];
@@ -45,7 +46,7 @@ const corsOptions = {
     if (allowedOrigins.some(allowed => origin.startsWith(allowed) || origin.endsWith('.vercel.app'))) {
       callback(null, true);
     } else {
-      callback(null, true); // Allow all origins in early stage; tighten in production
+      callback(new Error('Not allowed by CORS policy'));
     }
   },
   credentials: true,
@@ -70,6 +71,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/work-diary', workDiaryRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

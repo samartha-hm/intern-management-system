@@ -1,8 +1,9 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
+import apiService, { BASE_URL } from '../../services/apiService';
 
 // Define types
-interface User {
+export interface User {
   id: string;
   email: string;
   firstName: string;
@@ -10,6 +11,7 @@ interface User {
   role: string;
   department?: string;
   position?: string;
+  phone?: string;
   isActive: boolean;
 }
 
@@ -32,23 +34,15 @@ const initialState: AuthState = {
   isAuthenticated: false,
 };
 
-const rawApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-let cleanApiUrl = rawApiUrl.trim().replace(/\/+$/, '');
-if (!cleanApiUrl.endsWith('/api')) {
-  cleanApiUrl = `${cleanApiUrl}/api`;
-}
-const API_URL = cleanApiUrl;
-
 // Async thunks
 export const login = createAsyncThunk(
   'auth/login',
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      // Use unauthenticated fetch for login
+      const response = await fetch(`${BASE_URL}/auth/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
@@ -73,23 +67,20 @@ export const register = createAsyncThunk(
       password,
       firstName,
       lastName,
-      role,
     }: {
       email: string;
       password: string;
       firstName: string;
       lastName: string;
-      role?: string;
     },
     { rejectWithValue }
   ) => {
     try {
-      const response = await fetch(`${API_URL}/auth/register`, {
+      // Use unauthenticated fetch for registration
+      const response = await fetch(`${BASE_URL}/auth/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password, firstName, lastName, role }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, firstName, lastName }),
       });
 
       if (!response.ok) {
@@ -105,10 +96,24 @@ export const register = createAsyncThunk(
   }
 );
 
+export const fetchCurrentUser = createAsyncThunk(
+  'auth/fetchCurrentUser',
+  async (_, { rejectWithValue }) => {
+    try {
+      const data = await apiService.get<User>('/auth/me');
+      return data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch user');
+    }
+  }
+);
+
 export const logout = createAsyncThunk('auth/logout', async () => {
-  await fetch(`${API_URL}/auth/logout`, {
-    method: 'POST',
-  });
+  try {
+    await apiService.post('/auth/logout', undefined, true);
+  } catch {
+    // Logout should always succeed on the client side
+  }
 });
 
 // Slice
@@ -130,6 +135,7 @@ const authSlice = createSlice({
       state.token = null;
       state.refreshToken = null;
       state.isAuthenticated = false;
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -168,12 +174,25 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
+      // Fetch current user (token validation on mount)
+      .addCase(fetchCurrentUser.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.isAuthenticated = true;
+      })
+      .addCase(fetchCurrentUser.rejected, (state) => {
+        // Token is invalid/expired — clear everything
+        state.user = null;
+        state.token = null;
+        state.refreshToken = null;
+        state.isAuthenticated = false;
+      })
       // Logout
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
         state.token = null;
         state.refreshToken = null;
         state.isAuthenticated = false;
+        state.error = null;
       });
   },
 });
@@ -184,6 +203,7 @@ export default authSlice.reducer;
 
 // Selectors
 export const selectCurrentUser = (state: RootState) => state.auth.user;
+export const selectAuthToken = (state: RootState) => state.auth.token;
 export const selectIsAuthenticated = (state: RootState) => state.auth.isAuthenticated;
 export const selectAuthLoading = (state: RootState) => state.auth.isLoading;
 export const selectAuthError = (state: RootState) => state.auth.error;

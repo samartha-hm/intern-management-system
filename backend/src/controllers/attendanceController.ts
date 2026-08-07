@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prismaClient';
 
 // @desc    Check-In for the day
 // @route   POST /api/attendance/check-in
@@ -55,6 +53,7 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
 // @access  Private (Intern)
 export const checkOut = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.id;
+  const { notes } = req.body;
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -91,6 +90,7 @@ export const checkOut = asyncHandler(async (req: Request, res: Response) => {
     data: {
       checkOutTime: now,
       workHours,
+      notes: notes || attendance.notes,
     },
   });
 
@@ -134,3 +134,29 @@ export const getAllAttendance = asyncHandler(async (req: Request, res: Response)
 
   res.json(records);
 });
+
+// @desc    Verify/Approve attendance record
+// @route   PUT /api/attendance/:id/verify
+// @access  Private/Mentor/HR/Admin
+export const verifyAttendance = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const attendance = await prisma.attendance.findUnique({
+    where: { id },
+  });
+
+  if (!attendance) {
+    res.status(404);
+    throw new Error('Attendance record not found');
+  }
+
+  const updated = await prisma.attendance.update({
+    where: { id },
+    data: {
+      approvedBy: req.user!.id,
+    },
+  });
+
+  res.json(updated);
+});
+

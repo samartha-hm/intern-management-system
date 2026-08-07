@@ -2,17 +2,32 @@ import React, { useState } from 'react';
 import { Card, Row, Col, Avatar, Button, Typography, Tag, Descriptions, Form, Input, message } from 'antd';
 import { UserOutlined, PhoneOutlined, BankOutlined, SafetyCertificateOutlined, EditOutlined, SaveOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useDispatch } from 'react-redux';
+import { fetchCurrentUser } from '../redux/slices/authSlice';
+import type { AppDispatch } from '../redux/store';
+import apiService from '../services/apiService';
 
 const { Title, Text } = Typography;
 
 const Profile: React.FC = () => {
   const { currentUser } = useAuth();
+  const dispatch = useDispatch<AppDispatch>();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
-  const handleSave = (values: any) => {
-    setIsEditing(false);
-    message.success('Profile updated successfully!');
+  const handleSave = async (values: any) => {
+    try {
+      setLoading(true);
+      await apiService.put('/auth/me', values);
+      await dispatch(fetchCurrentUser());
+      setIsEditing(false);
+      message.success('Profile updated successfully!');
+    } catch (err: any) {
+      message.error(err.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,7 +83,7 @@ const Profile: React.FC = () => {
               {!isEditing ? (
                 <Button icon={<EditOutlined />} onClick={() => setIsEditing(true)}>Edit Profile</Button>
               ) : (
-                <Button type="primary" icon={<SaveOutlined />} onClick={() => form.submit()}>Save Changes</Button>
+                <Button type="primary" icon={<SaveOutlined />} loading={loading} onClick={() => form.submit()}>Save Changes</Button>
               )}
             </div>
 

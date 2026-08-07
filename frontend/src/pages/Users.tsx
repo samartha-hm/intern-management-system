@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, Switch, message, Avatar, Typography } from 'antd';
 import { PlusOutlined, SearchOutlined, UserOutlined, CrownOutlined, SafetyCertificateOutlined, TeamOutlined, ReadOutlined } from '@ant-design/icons';
+import apiService from '../services/apiService';
 
 const { Title, Text } = Typography;
 
@@ -14,40 +15,63 @@ interface UserItem {
   totalProgramDays?: number;
 }
 
-const INITIAL_USERS: UserItem[] = [
-  { id: '1', name: 'Admin User', email: 'admin@experimindlabs.com', role: 'ADMIN', department: 'Management', isActive: true },
-  { id: '2', name: 'HR Lead', email: 'hr@experimindlabs.com', role: 'HR', department: 'Human Resources', isActive: true },
-  { id: '3', name: 'Jane Smith', email: 'mentor@experimindlabs.com', role: 'MENTOR', department: 'Engineering', isActive: true },
-  { id: '4', name: 'John Doe', email: 'intern@experimindlabs.com', role: 'INTERN', department: 'Engineering', isActive: true, totalProgramDays: 65 },
-  { id: '5', name: 'David Miller', email: 'david.m@experimindlabs.com', role: 'MENTOR', department: 'Data Science', isActive: true },
-];
-
 const Users: React.FC = () => {
-  const [users, setUsers] = useState<UserItem[]>(INITIAL_USERS);
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
 
-  const handleCreateUser = (values: any) => {
-    const newUser: UserItem = {
-      id: String(users.length + 1),
-      name: `${values.firstName} ${values.lastName}`,
-      email: values.email,
-      role: values.role,
-      department: values.department || 'General',
-      isActive: true,
-      totalProgramDays: values.role === 'INTERN' ? (values.totalProgramDays || 65) : undefined,
-    };
-    setUsers([newUser, ...users]);
-    setIsModalOpen(false);
-    form.resetFields();
-    message.success(`User ${newUser.name} created successfully!`);
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const data = await apiService.get('/users');
+      const mapped = data.map((u: any) => ({
+        id: u.id,
+        name: `${u.firstName} ${u.lastName}`,
+        email: u.email,
+        role: u.role,
+        department: u.department || 'General',
+        isActive: u.isActive,
+      }));
+      setUsers(mapped);
+    } catch (err: any) {
+      message.error(err.message || 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleUserStatus = (id: string, active: boolean) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isActive: active } : u)));
-    message.info(`User status updated.`);
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleCreateUser = async (values: any) => {
+    try {
+      await apiService.post('/auth/register', {
+        email: values.email,
+        password: values.password || 'password123',
+        firstName: values.firstName,
+        lastName: values.lastName,
+      });
+      message.success(`User ${values.firstName} ${values.lastName} registered successfully!`);
+      setIsModalOpen(false);
+      form.resetFields();
+      fetchUsers();
+    } catch (err: any) {
+      message.error(err.message || 'Failed to create user');
+    }
+  };
+
+  const toggleUserStatus = async (id: string, active: boolean) => {
+    try {
+      await apiService.put(`/users/${id}`, { isActive: active });
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isActive: active } : u)));
+      message.success(`User status updated to ${active ? 'Active' : 'Inactive'}.`);
+    } catch (err: any) {
+      message.error(err.message || 'Failed to update user status');
+    }
   };
 
   const filteredUsers = users.filter((user) => {
@@ -153,7 +177,7 @@ const Users: React.FC = () => {
           </Select>
         </div>
 
-        <Table columns={columns} dataSource={filteredUsers} rowKey="id" pagination={{ pageSize: 6 }} />
+        <Table columns={columns} dataSource={filteredUsers} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
       </Card>
 
       <Modal

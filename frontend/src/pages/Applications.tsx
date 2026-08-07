@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Tag, Space, Input, Select, Drawer, Typography, Rate, message, Avatar } from 'antd';
 import { SearchOutlined, CheckOutlined, CloseOutlined, EyeOutlined, FilePdfOutlined } from '@ant-design/icons';
+import apiService from '../services/apiService';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -15,24 +16,49 @@ interface ApplicationItem {
   notes: string;
 }
 
-const INITIAL_APPLICATIONS: ApplicationItem[] = [
-  { id: '101', applicantName: 'David Kim', email: 'david.kim@example.com', internshipTitle: 'Full Stack Software Development', appliedDate: '2026-08-01', score: 4.8, status: 'PENDING', notes: 'Strong background in React, Node.js and PostgreSQL.' },
-  { id: '102', applicantName: 'Sophia Martinez', email: 'sophia.m@example.com', internshipTitle: 'Data Science & ML Pipeline', appliedDate: '2026-08-02', score: 4.5, status: 'UNDER_REVIEW', notes: 'Proficient in Python, PyTorch, and SQL query tuning.' },
-  { id: '103', applicantName: 'Lucas Brown', email: 'lucas.b@example.com', internshipTitle: 'Product UI/UX & Design System', appliedDate: '2026-08-03', score: 4.9, status: 'ACCEPTED', notes: 'Exceptional Figma portfolio and micro-interaction skills.' },
-  { id: '104', applicantName: 'Emma Wilson', email: 'emma.w@example.com', internshipTitle: 'DevOps & Cloud Infrastructure', appliedDate: '2026-08-04', score: 3.2, status: 'REJECTED', notes: 'Lacks required Docker and Kubernetes experience.' },
-];
-
 const Applications: React.FC = () => {
-  const [data, setData] = useState<ApplicationItem[]>(INITIAL_APPLICATIONS);
+  const [data, setData] = useState<ApplicationItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedApp, setSelectedApp] = useState<ApplicationItem | null>(null);
 
-  const handleStatusChange = (id: string, newStatus: ApplicationItem['status']) => {
-    setData((prev) =>
-      prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
-    );
-    message.success(`Application marked as ${newStatus}`);
+  const fetchApplications = async () => {
+    try {
+      setLoading(true);
+      const res = await apiService.get('/applications');
+      const mapped = res.map((app: any) => ({
+        id: app.id,
+        applicantName: app.applicant ? `${app.applicant.firstName} ${app.applicant.lastName}` : 'Applicant',
+        email: app.applicant ? app.applicant.email : '',
+        internshipTitle: app.internship ? app.internship.title : 'Program',
+        appliedDate: app.createdAt ? new Date(app.createdAt).toISOString().split('T')[0] : '',
+        score: 4.5,
+        status: app.status,
+        notes: app.notes || 'No review notes provided yet.',
+      }));
+      setData(mapped);
+    } catch (err: any) {
+      message.error(err.message || 'Failed to load applications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
+
+  const handleStatusChange = async (id: string, newStatus: ApplicationItem['status']) => {
+    try {
+      await apiService.put(`/applications/${id}`, { status: newStatus });
+      setData((prev) =>
+        prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
+      );
+      message.success(`Application marked as ${newStatus}`);
+    } catch (err: any) {
+      message.error(err.message || 'Failed to update application status');
+    }
   };
 
   const filteredData = data.filter((app) => {
@@ -148,7 +174,7 @@ const Applications: React.FC = () => {
           </Select>
         </div>
 
-        <Table columns={columns} dataSource={filteredData} rowKey="id" pagination={{ pageSize: 6 }} />
+        <Table columns={columns} dataSource={filteredData} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
       </Card>
 
       {/* Review Drawer */}

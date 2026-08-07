@@ -1,11 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import asyncHandler from 'express-async-handler';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prismaClient';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-
-const prisma = new PrismaClient();
 
 // Configure multer for file upload
 const storage = multer.diskStorage({

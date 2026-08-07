@@ -12,39 +12,61 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
+import apiService from '../services/apiService';
+
 const { Title, Text } = Typography;
-
-const DEPARTMENT_DATA = [
-  { name: 'Engineering', interns: 12 },
-  { name: 'Data Science', interns: 8 },
-  { name: 'Product UI', interns: 5 },
-  { name: 'Marketing', interns: 4 },
-  { name: 'DevOps', interns: 3 },
-];
-
-const APPLICATION_STATUS_DATA = [
-  { name: 'Accepted', value: 18, color: '#10b981' },
-  { name: 'Under Review', value: 12, color: '#3b82f6' },
-  { name: 'Pending', value: 8, color: '#f59e0b' },
-  { name: 'Rejected', value: 5, color: '#ef4444' },
-];
 
 const Dashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [stats] = useState({
-    totalInterns: 32,
-    activeInternships: 12,
-    pendingApplications: 8,
-    completedEvaluations: 24,
-    avgPerformanceScore: 92,
+  const [stats, setStats] = useState({
+    totalInterns: 0,
+    activeInternships: 0,
+    pendingApplications: 0,
+    completedEvaluations: 0,
+    avgPerformanceScore: 0,
   });
+  const [departmentData, setDepartmentData] = useState<any[]>([]);
+  const [applicationStatusData, setApplicationStatusData] = useState<any[]>([]);
+  const [recentInterns, setRecentInterns] = useState<any[]>([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 400);
-    return () => clearTimeout(timer);
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const data = await apiService.get('/dashboard/stats');
+        setStats(data.stats);
+        if (data.departmentData && data.departmentData.length > 0) {
+          setDepartmentData(data.departmentData);
+        }
+        if (data.applicationStatusData && data.applicationStatusData.length > 0) {
+          setApplicationStatusData(data.applicationStatusData);
+        }
+
+        // Fetch recent interns from users endpoint
+        const users = await apiService.get('/users');
+        const interns = users
+          .filter((u: any) => u.role === 'INTERN')
+          .slice(0, 5)
+          .map((u: any, idx: number) => ({
+            key: u.id,
+            name: `${u.firstName} ${u.lastName}`,
+            email: u.email,
+            track: u.department || 'General',
+            mentor: 'Assigned Mentor',
+            progress: 75,
+            status: u.isActive ? 'Active' : 'Inactive',
+            avatarColor: ['#6366f1', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899'][idx % 5],
+          }));
+        setRecentInterns(interns);
+      } catch (err) {
+        console.error('Failed to load dashboard stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
   const columns = [
@@ -101,12 +123,20 @@ const Dashboard: React.FC = () => {
     },
   ];
 
-  const recentInterns = [
-    { key: '1', name: 'John Doe', email: 'john@experimindlabs.com', track: 'Software Engineering', mentor: 'Jane Smith', progress: 75, status: 'Active', avatarColor: '#6366f1' },
-    { key: '2', name: 'Alice Walker', email: 'alice@experimindlabs.com', track: 'Data Science', mentor: 'David Miller', progress: 40, status: 'Onboarding', avatarColor: '#8b5cf6' },
-    { key: '3', name: 'Michael Chen', email: 'michael@experimindlabs.com', track: 'Product UI/UX', mentor: 'Sarah Connor', progress: 90, status: 'Evaluation', avatarColor: '#10b981' },
-    { key: '4', name: 'Emily Davis', email: 'emily@experimindlabs.com', track: 'DevOps & Cloud', mentor: 'Alex Johnson', progress: 60, status: 'Active', avatarColor: '#f59e0b' },
+  const DEFAULT_DEPT = [
+    { name: 'Engineering', interns: 12 },
+    { name: 'Data Science', interns: 8 },
+    { name: 'Product UI', interns: 5 },
   ];
+
+  const DEFAULT_STATUS = [
+    { name: 'Accepted', value: 18, color: '#10b981' },
+    { name: 'Under Review', value: 12, color: '#3b82f6' },
+    { name: 'Pending', value: 8, color: '#f59e0b' },
+  ];
+
+  const chartDepts = departmentData.length > 0 ? departmentData : DEFAULT_DEPT;
+  const chartStatuses = applicationStatusData.length > 0 ? applicationStatusData : DEFAULT_STATUS;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -139,7 +169,7 @@ const Dashboard: React.FC = () => {
                 <Text type="secondary" style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>Total Interns</Text>
                 <Title level={2} style={{ margin: '4px 0 0 0', fontWeight: 800 }}>{stats.totalInterns}</Title>
                 <Text type="success" style={{ fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                  <ArrowUpOutlined /> +14% this month
+                  <ArrowUpOutlined /> Active Cohort
                 </Text>
               </div>
               <div className="stat-icon-wrapper" style={{ background: '#e0e7ff', color: '#4f46e5' }}>
@@ -155,7 +185,7 @@ const Dashboard: React.FC = () => {
               <div>
                 <Text type="secondary" style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>Active Programs</Text>
                 <Title level={2} style={{ margin: '4px 0 0 0', fontWeight: 800 }}>{stats.activeInternships}</Title>
-                <Text type="secondary" style={{ fontSize: 12 }}>Across 5 Departments</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>Across Departments</Text>
               </div>
               <div className="stat-icon-wrapper" style={{ background: '#f3e8ff', color: '#9333ea' }}>
                 <FileTextOutlined />
@@ -198,10 +228,10 @@ const Dashboard: React.FC = () => {
       {/* Analytics Charts Row */}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={15}>
-          <Card title="Intern Distribution by Department" extra={<Tag color="purple">Q3 Cohort</Tag>} loading={loading}>
+          <Card title="Intern Distribution by Department" extra={<Tag color="purple">Active Cohort</Tag>} loading={loading}>
             <div style={{ height: 260, width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={DEPARTMENT_DATA} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                <BarChart data={chartDepts} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                   <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} />
                   <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} />
                   <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
@@ -224,14 +254,14 @@ const Dashboard: React.FC = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={APPLICATION_STATUS_DATA}
+                    data={chartStatuses}
                     innerRadius={60}
                     outerRadius={90}
                     paddingAngle={4}
                     dataKey="value"
                   >
-                    {APPLICATION_STATUS_DATA.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {chartStatuses.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || '#6366f1'} />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />

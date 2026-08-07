@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import asyncHandler from 'express-async-handler';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prismaClient';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-const prisma = new PrismaClient();
 
 // Generate JWT token
 const generateToken = (id: string) => {
@@ -267,6 +266,11 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
 export const changePassword = asyncHandler(async (req: Request, res: Response) => {
   const { currentPassword, newPassword } = req.body;
 
+  if (!newPassword || newPassword.length < 8) {
+    res.status(400);
+    throw new Error('New password must be at least 8 characters long');
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: req.user?.id },
   });
@@ -339,6 +343,11 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response) =
 export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
   const { token } = req.params;
   const { password } = req.body;
+
+  if (!password || password.length < 8) {
+    res.status(400);
+    throw new Error('Password must be at least 8 characters long');
+  }
 
   // Hash token
   const hashedToken = crypto

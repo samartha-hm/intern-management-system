@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Button, Tag, Table, Typography, Space, message, Statistic, Progress, Modal, Form, Input } from 'antd';
 import { ClockCircleOutlined, QrcodeOutlined, LogoutOutlined, CheckCircleOutlined, CalendarOutlined, SafetyCertificateOutlined, CameraOutlined, BankOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
+import apiService from '../services/apiService';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -16,19 +17,12 @@ interface AttendanceRecord {
   workSummary?: string;
 }
 
-const INITIAL_ATTENDANCE: AttendanceRecord[] = [
-  { id: '1', date: '2026-08-06', checkIn: '09:15 AM', checkOut: null, workHours: null, status: 'PRESENT' },
-  { id: '2', date: '2026-08-05', checkIn: '09:42 AM', checkOut: '05:30 PM', workHours: 7.8, status: 'LATE', workSummary: 'Implemented UI design system components and responsive grid layouts.' },
-  { id: '3', date: '2026-08-04', checkIn: '09:05 AM', checkOut: '05:30 PM', workHours: 8.4, status: 'PRESENT', workSummary: 'Fixed Prisma client relationship models and database seed scripts.' },
-  { id: '4', date: '2026-08-03', checkIn: '09:10 AM', checkOut: '05:30 PM', workHours: 8.3, status: 'PRESENT', workSummary: 'Created Express API controllers for document uploads and file security.' },
-  { id: '5', date: '2026-08-01', checkIn: '09:00 AM', checkOut: '01:30 PM', workHours: 4.5, status: 'HALF_DAY', workSummary: 'Attended weekly sprint planning and code review.' },
-];
-
 const Attendance: React.FC = () => {
   const { currentUser } = useAuth();
-  const [records, setRecords] = useState<AttendanceRecord[]>(INITIAL_ATTENDANCE);
-  const [isCheckedIn, setIsCheckedIn] = useState<boolean>(true);
-  const [todayRecord, setTodayRecord] = useState<AttendanceRecord>(INITIAL_ATTENDANCE[0]);
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isCheckedIn, setIsCheckedIn] = useState<boolean>(false);
+  const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
   const [todayWorkSummary, setTodayWorkSummary] = useState<string>('');
 
   // Modals
@@ -39,6 +33,44 @@ const Attendance: React.FC = () => {
 
   const [diaryForm] = Form.useForm();
 
+  const fetchAttendance = async () => {
+    try {
+      setLoading(true);
+      const data = await apiService.get('/attendance/my');
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      const mapped: AttendanceRecord[] = data.map((r: any) => ({
+        id: r.id,
+        date: r.date ? new Date(r.date).toISOString().split('T')[0] : '',
+        checkIn: r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+        checkOut: r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
+        workHours: r.workHours || null,
+        status: r.status,
+        workSummary: r.notes || '',
+      }));
+
+      setRecords(mapped);
+
+      // Check if there is an active check-in today without check-out
+      const todayRec = mapped.find((r) => r.date === todayStr);
+      if (todayRec) {
+        setTodayRecord(todayRec);
+        setIsCheckedIn(!todayRec.checkOut);
+      } else {
+        setIsCheckedIn(false);
+        setTodayRecord(null);
+      }
+    } catch (err: any) {
+      message.error(err.message || 'Failed to load attendance records');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAttendance();
+  }, []);
+
   // Personalized Intern Contract Details
   const totalProgramDays = currentUser?.totalProgramDays || 65;
   const programDetails = {
@@ -47,13 +79,13 @@ const Attendance: React.FC = () => {
     startDate: '2026-06-01',
     endDate: '2026-08-31',
     totalProgramDays: totalProgramDays,
-    elapsedDays: Math.min(45, totalProgramDays),
-    presentDays: Math.min(43, totalProgramDays),
-    lateDays: 2,
-    totalHoursLogged: 164,
+    elapsedDays: Math.min(records.length || 1, totalProgramDays),
+    presentDays: records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length || 1,
+    lateDays: records.filter((r) => r.status === 'LATE').length,
+    totalHoursLogged: records.reduce((acc, r) => acc + (r.workHours || 0), 0),
   };
 
-  const attendanceRate = Math.round((programDetails.presentDays / programDetails.elapsedDays) * 1000) / 10;
+  const attendanceRate = Math.round((programDetails.presentDays / Math.max(1, programDetails.elapsedDays)) * 1000) / 10;
   const programProgressPct = Math.round((programDetails.elapsedDays / programDetails.totalProgramDays) * 1000) / 10;
 
   // Trigger Check-In Flow
@@ -77,37 +109,26 @@ const Attendance: React.FC = () => {
   };
 
   // Confirm QR Scanning
-  const confirmQrScan = () => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    if (qrActionType === 'CHECK_IN') {
-      const isLate = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 30);
-      const newRecord: AttendanceRecord = {
-        id: String(Date.now()),
-        date: new Date().toISOString().split('T')[0],
-        checkIn: timeStr,
-        checkOut: null,
-        workHours: null,
-        status: isLate ? 'LATE' : 'PRESENT',
-      };
-      setTodayRecord(newRecord);
-      setIsCheckedIn(true);
-      setRecords([newRecord, ...records.filter((r) => r.date !== newRecord.date)]);
-      message.success('Entrance Check-In QR Scanned & Verified!');
-    } else {
-      const updated = {
-        ...todayRecord,
-        checkOut: timeStr,
-        workHours: 8.0,
-        workSummary: todayWorkSummary,
-      };
-      setTodayRecord(updated);
-      setIsCheckedIn(false);
-      setRecords(records.map((r) => (r.id === todayRecord.id ? updated : r)));
-      message.success('Exit Check-Out QR Scanned & Work Summary Logged!');
+  const confirmQrScan = async () => {
+    try {
+      if (qrActionType === 'CHECK_IN') {
+        await apiService.post('/attendance/check-in', { notes: 'QR Kiosk Check-In' });
+        message.success('Entrance Check-In Verified & Saved!');
+      } else {
+        await apiService.post('/attendance/check-out');
+        if (todayWorkSummary) {
+          await apiService.post('/work-diary', {
+            tasksDone: todayWorkSummary,
+            hoursSpent: 8.0,
+          });
+        }
+        message.success('Exit Check-Out Verified & Work Diary Submitted!');
+      }
+      setIsQrModalOpen(false);
+      fetchAttendance();
+    } catch (err: any) {
+      message.error(err.message || 'Check-in/out failed');
     }
-    setIsQrModalOpen(false);
   };
 
   // Submit Work Diary Summary & Proceed to Check-Out
@@ -182,7 +203,7 @@ const Attendance: React.FC = () => {
               <QrcodeOutlined />
             </div>
             <Title level={3} style={{ margin: 0, fontWeight: 800 }}>
-              {todayRecord.checkIn ? `Checked In: ${todayRecord.checkIn}` : 'Not Checked In Yet'}
+              {todayRecord?.checkIn ? `Checked In: ${todayRecord.checkIn}` : 'Not Checked In Yet'}
             </Title>
             <Text type="secondary" style={{ display: 'block', marginBottom: 20 }}>
               Requirement: Scan Office Check-In (Entrance) or Check-Out (Exit) QR Screen
@@ -193,12 +214,12 @@ const Attendance: React.FC = () => {
                 Scan Entrance QR Code to Clock In
               </Button>
             ) : (
-              <Button danger size="large" block icon={<LogoutOutlined />} onClick={handleCheckOutClick} disabled={Boolean(todayRecord.checkOut)} style={{ height: 48, fontSize: 15, fontWeight: 700 }}>
-                {todayRecord.checkOut ? 'Checked Out for Today' : 'Scan Exit QR Code to Clock Out'}
+              <Button danger size="large" block icon={<LogoutOutlined />} onClick={handleCheckOutClick} disabled={Boolean(todayRecord?.checkOut)} style={{ height: 48, fontSize: 15, fontWeight: 700 }}>
+                {todayRecord?.checkOut ? 'Checked Out for Today' : 'Scan Exit QR Code to Clock Out'}
               </Button>
             )}
 
-            {todayRecord.checkIn && (
+            {todayRecord?.checkIn && (
               <div style={{ marginTop: 16, padding: '12px 14px', background: '#f8fafc', borderRadius: 10, textAlign: 'left', fontSize: 13, border: '1px solid #e2e8f0' }}>
                 <Text style={{ display: 'block' }}>Status: <Tag color={todayRecord.status === 'LATE' ? 'gold' : 'green'}>{todayRecord.status}</Tag></Text>
                 <Text style={{ display: 'block', marginTop: 4 }}>
@@ -248,7 +269,7 @@ const Attendance: React.FC = () => {
 
       {/* History Table */}
       <Card title="Attendance Logs History" styles={{ body: { padding: 20 } }}>
-        <Table columns={columns} dataSource={records} rowKey="id" pagination={{ pageSize: 7 }} />
+        <Table columns={columns} dataSource={records} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
       </Card>
 
       {/* Camera Viewfinder QR Scanner Modal */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, Button, Checkbox, message, Card, Typography, Space, Tag, Divider } from 'antd';
+import { Form, Input, Button, Checkbox, message, Card, Typography, Space, Tag, Divider, Modal } from 'antd';
 import { UserOutlined, LockOutlined, RocketOutlined, CrownOutlined, SafetyCertificateOutlined, TeamOutlined, ReadOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -103,7 +103,16 @@ const Login: React.FC = () => {
               <Form.Item name="remember" valuePropName="checked" noStyle>
                 <Checkbox style={{ fontSize: 13 }}>Remember me</Checkbox>
               </Form.Item>
-              <a href="#forgot" style={{ fontSize: 13, color: '#6366f1', fontWeight: 600 }}>Forgot password?</a>
+              <Button
+                type="link"
+                onClick={() => Modal.info({
+                  title: 'Password Reset Request',
+                  content: 'To reset your password, please contact your Experimind Labs administrator or HR manager at hr@experimindlabs.com.',
+                })}
+                style={{ fontSize: 13, color: '#6366f1', fontWeight: 600, padding: 0 }}
+              >
+                Forgot password?
+              </Button>
             </div>
 
             <Button
@@ -123,25 +132,29 @@ const Login: React.FC = () => {
             )}
           </Form>
 
-          <Divider style={{ margin: '24px 0 16px 0', fontSize: 12, color: '#94a3b8' }}>
-            ⚡ QUICK DEMO LOGINS (1-CLICK)
-          </Divider>
+          {process.env.REACT_APP_SHOW_DEMO_LOGINS !== 'false' && (
+            <>
+              <Divider style={{ margin: '24px 0 16px 0', fontSize: 12, color: '#94a3b8' }}>
+                ⚡ QUICK DEMO LOGINS (1-CLICK)
+              </Divider>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {DEMO_ACCOUNTS.map((acc) => (
-              <div
-                key={acc.email}
-                className="demo-account-chip"
-                onClick={() => handleQuickDemoLogin(acc.email, acc.role.includes('Admin') ? 'ADMIN' : acc.role.includes('HR') ? 'HR' : acc.role.includes('Mentor') ? 'MENTOR' : 'INTERN')}
-              >
-                <Space size={6}>
-                  {acc.icon}
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{acc.role}</span>
-                </Space>
-                <Tag style={{ fontSize: 10, margin: 0 }}>{acc.badge}</Tag>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {DEMO_ACCOUNTS.map((acc) => (
+                  <div
+                    key={acc.email}
+                    className="demo-account-chip"
+                    onClick={() => handleQuickDemoLogin(acc.email, acc.role.includes('Admin') ? 'ADMIN' : acc.role.includes('HR') ? 'HR' : acc.role.includes('Mentor') ? 'MENTOR' : 'INTERN')}
+                  >
+                    <Space size={6}>
+                      {acc.icon}
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{acc.role}</span>
+                    </Space>
+                    <Tag style={{ fontSize: 10, margin: 0 }}>{acc.badge}</Tag>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
 
           <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: '#64748b' }}>
             Don't have an account? <Link to="/register" style={{ color: '#6366f1', fontWeight: 700 }}>Register Now</Link>

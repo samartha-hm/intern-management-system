@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prismaClient';
 
 // @desc    Submit or update daily work diary
 // @route   POST /api/work-diary

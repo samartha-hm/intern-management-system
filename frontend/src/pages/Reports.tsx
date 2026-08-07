@@ -1,7 +1,8 @@
-import React from 'react';
-import { Card, Row, Col, Statistic, Button, Typography, Space, Tag, Table } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Row, Col, Statistic, Button, Typography, Space, Tag, Table, message } from 'antd';
 import { FilePdfOutlined, FileExcelOutlined, ClockCircleOutlined, CheckCircleOutlined, TeamOutlined, RiseOutlined } from '@ant-design/icons';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import apiService from '../services/apiService';
 
 const { Title, Text } = Typography;
 
@@ -14,14 +15,80 @@ const COHORT_ATTENDANCE_DATA = [
   { month: 'Jun', compliance: 98, totalHours: 1820 },
 ];
 
-const ATTENDANCE_COMPLIANCE_LOGS = [
-  { key: '1', intern: 'John Doe', department: 'Software Engineering', presentDays: 21, totalDays: 22, lateDays: 1, compliancePct: 95.4, totalHours: 164 },
-  { key: '2', intern: 'Alice Walker', department: 'Data Science', presentDays: 22, totalDays: 22, lateDays: 0, compliancePct: 100.0, totalHours: 176 },
-  { key: '3', intern: 'Michael Chen', department: 'Product UI/UX', presentDays: 20, totalDays: 22, lateDays: 2, compliancePct: 90.9, totalHours: 158 },
-  { key: '4', intern: 'Emily Davis', department: 'DevOps & Cloud', presentDays: 22, totalDays: 22, lateDays: 0, compliancePct: 100.0, totalHours: 172 },
-];
-
 const Reports: React.FC = () => {
+  const [reportData, setReportData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchReportData = async () => {
+    try {
+      setLoading(true);
+      const data = await apiService.get('/attendance');
+      
+      // Group by user
+      const userMap: Record<string, any> = {};
+      data.forEach((r: any) => {
+        const userId = r.userId;
+        const userName = r.user ? `${r.user.firstName} ${r.user.lastName}` : 'Intern';
+        const dept = r.user ? r.user.department || 'Engineering' : 'General';
+        
+        if (!userMap[userId]) {
+          userMap[userId] = {
+            key: userId,
+            intern: userName,
+            department: dept,
+            presentDays: 0,
+            totalDays: 0,
+            lateDays: 0,
+            totalHours: 0,
+          };
+        }
+        
+        userMap[userId].totalDays += 1;
+        if (r.status === 'PRESENT') userMap[userId].presentDays += 1;
+        if (r.status === 'LATE') {
+          userMap[userId].presentDays += 1;
+          userMap[userId].lateDays += 1;
+        }
+        userMap[userId].totalHours += (r.workHours || 8.0);
+      });
+
+      const list = Object.values(userMap).map((item) => ({
+        ...item,
+        compliancePct: Math.round((item.presentDays / Math.max(1, item.totalDays)) * 1000) / 10,
+        totalHours: Math.round(item.totalHours * 10) / 10,
+      }));
+
+      setReportData(list);
+    } catch (err: any) {
+      message.error(err.message || 'Failed to load report compliance data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReportData();
+  }, []);
+
+  const handleExportCSV = () => {
+    if (reportData.length === 0) {
+      message.warning('No report data available to export');
+      return;
+    }
+    const headers = ['Intern Name', 'Department', 'Present Days', 'Total Days', 'Late Days', 'Compliance %', 'Total Hours'];
+    const rows = reportData.map((r) => [r.intern, r.department, r.presentDays, r.totalDays, r.lateDays, `${r.compliancePct}%`, r.totalHours]);
+    const csvContent = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `experimind_attendance_compliance_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    message.success('Compliance report exported as CSV!');
+  };
   const columns = [
     {
       title: 'Intern',
@@ -66,8 +133,8 @@ const Reports: React.FC = () => {
           <Text type="secondary">Attendance compliance tracking, total logged work hours, and exportable monthly summaries</Text>
         </div>
         <Space>
-          <Button icon={<FileExcelOutlined style={{ color: '#10b981' }} />}>Export Excel</Button>
-          <Button type="primary" icon={<FilePdfOutlined />}>Export PDF Report</Button>
+          <Button icon={<FileExcelOutlined style={{ color: '#10b981' }} />} onClick={handleExportCSV}>Export CSV</Button>
+          <Button type="primary" icon={<FilePdfOutlined />} onClick={handleExportCSV}>Export PDF / Print</Button>
         </Space>
       </div>
 
@@ -115,7 +182,7 @@ const Reports: React.FC = () => {
       </Card>
 
       <Card title="Monthly Attendance & Logged Hours Compliance Table">
-        <Table columns={columns} dataSource={ATTENDANCE_COMPLIANCE_LOGS} rowKey="key" pagination={false} />
+        <Table columns={columns} dataSource={reportData} rowKey="key" loading={loading} pagination={{ pageSize: 8 }} />
       </Card>
     </div>
   );
