@@ -215,8 +215,8 @@ const App: React.FC = () => {
                 <Route path="/qr-kiosk/exit" element={<CheckOutQrKiosk />} />
                 <Route path="/internships" element={<Internships />} />
                 <Route path="/applications" element={<Applications />} />
-                <Route path="/attendance" element={<Attendance />} />
-                <Route path="/work-diary" element={<WorkDiary />} />
+                <Route path="/attendance" element={currentUser?.role === 'INTERN' ? <Attendance /> : <Navigate to="/attendance-review" replace />} />
+                <Route path="/work-diary" element={currentUser?.role === 'INTERN' ? <WorkDiary /> : <Navigate to="/work-diary-review" replace />} />
                 <Route path="/attendance-review" element={<AttendanceReview />} />
                 <Route path="/work-diary-review" element={<WorkDiaryReview />} />
                 <Route path="/profile" element={<Profile />} />

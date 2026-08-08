@@ -57,6 +57,61 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
+// @desc    Create new user with custom role
+// @route   POST /api/users
+// @access  Private/Admin
+export const createUser = asyncHandler(async (req: Request, res: Response) => {
+  const { email, password, firstName, lastName, role, department, position, contractDays } = req.body;
+
+  if (!email || !password || !firstName || !lastName) {
+    res.status(400);
+    throw new Error('Please provide email, password, firstName, and lastName');
+  }
+
+  const userExists = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (userExists) {
+    res.status(400);
+    throw new Error('User with this email address already exists');
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  const targetRole = role === 'ADMIN' ? 'ADMIN' : role === 'MENTOR' ? 'MENTOR' : 'INTERN';
+
+  const user = await prisma.user.create({
+    data: {
+      email,
+      password: hashedPassword,
+      firstName,
+      lastName,
+      role: targetRole,
+      department: department || 'General',
+      position: position || (targetRole === 'MENTOR' ? 'Mentor' : targetRole === 'ADMIN' ? 'System Administrator' : 'Software Engineering Intern'),
+      contractDays: Number(contractDays) || 65,
+      batchStatus: targetRole === 'INTERN' ? 'NONE' : 'APPROVED',
+    },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      department: true,
+      position: true,
+      contractDays: true,
+      batchStatus: true,
+      isActive: true,
+      createdAt: true,
+    },
+  });
+
+  res.status(201).json(user);
+});
+
 // @desc    Update user
 // @route   PUT /api/users/:id
 // @access  Private/Admin
@@ -73,6 +128,7 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
     user.department = req.body.department || user.department;
     user.position = req.body.position || user.position;
     user.phone = req.body.phone || user.phone;
+    user.contractDays = req.body.contractDays !== undefined ? Number(req.body.contractDays) : user.contractDays;
     user.isActive = req.body.isActive !== undefined ? req.body.isActive : user.isActive;
 
     const updatedUser = await prisma.user.update({
@@ -85,6 +141,7 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
         department: user.department,
         position: user.position,
         phone: user.phone,
+        contractDays: user.contractDays,
         isActive: user.isActive,
       },
       select: {
@@ -96,6 +153,7 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
         department: true,
         position: true,
         phone: true,
+        contractDays: true,
         isActive: true,
       },
     });

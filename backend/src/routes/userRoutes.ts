@@ -3,6 +3,7 @@ import { protect, authorize } from '../middleware/authMiddleware';
 import {
   getUsers,
   getUserById,
+  createUser,
   updateUser,
   deleteUser,
   updateUserPassword,
@@ -20,16 +21,17 @@ router.use(protect);
 // Intern batch request
 router.post('/request-batch', requestBatch);
 
-// Supervisor / Admin routes (ADMIN, MENTOR, HR)
+// Supervisor / Admin routes (ADMIN, MENTOR)
 router.get('/batch-requests', authorize('ADMIN', 'MENTOR', 'HR'), getBatchRequests);
 router.put('/:id/batch-status', authorize('ADMIN', 'MENTOR', 'HR'), updateBatchStatus);
 router.put('/:id/contract', authorize('ADMIN', 'MENTOR', 'HR'), updateUserContract);
 
-// Admin only user management routes
-router.use(authorize('ADMIN', 'HR'));
+// User management routes (ADMIN, MENTOR, HR)
+router.use(authorize('ADMIN', 'MENTOR', 'HR'));
 
 router.route('/')
-  .get(getUsers);
+  .get(getUsers)
+  .post(createUser);
 
 router.route('/:id')
   .get(getUserById)

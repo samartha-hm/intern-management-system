@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, Switch, message, Avatar, Typography } from 'antd';
-import { PlusOutlined, SearchOutlined, UserOutlined, CrownOutlined, SafetyCertificateOutlined, TeamOutlined, ReadOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, UserOutlined, CrownOutlined, TeamOutlined, ReadOutlined, EditOutlined } from '@ant-design/icons';
 import apiService from '../services/apiService';
 
 const { Title, Text } = Typography;
@@ -8,12 +8,13 @@ const { Title, Text } = Typography;
 interface UserItem {
   id: string;
   name: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  role: 'ADMIN' | 'HR' | 'MENTOR' | 'INTERN';
+  role: 'ADMIN' | 'MENTOR' | 'INTERN';
   department: string;
   contractDays?: number;
   isActive: boolean;
-  totalProgramDays?: number;
 }
 
 const Users: React.FC = () => {
@@ -24,8 +25,13 @@ const Users: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
 
+  // Edit User Modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
+  const [editForm] = Form.useForm();
+
+  // Contract Modal
   const [contractModalOpen, setContractModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
   const [editDays, setEditDays] = useState<number>(65);
 
   const fetchUsers = async () => {
@@ -35,6 +41,8 @@ const Users: React.FC = () => {
       const mapped = data.map((u: any) => ({
         id: u.id,
         name: `${u.firstName} ${u.lastName}`,
+        firstName: u.firstName,
+        lastName: u.lastName,
         email: u.email,
         role: u.role,
         department: u.department || 'General',
@@ -69,18 +77,53 @@ const Users: React.FC = () => {
 
   const handleCreateUser = async (values: any) => {
     try {
-      await apiService.post('/auth/register', {
-        email: values.email,
-        password: values.password || 'password123',
+      await apiService.post('/users', {
         firstName: values.firstName,
         lastName: values.lastName,
+        email: values.email,
+        password: values.password || 'password123',
+        role: values.role,
+        department: values.department,
+        contractDays: values.totalProgramDays || 65,
       });
-      message.success(`User ${values.firstName} ${values.lastName} registered successfully!`);
+      message.success(`User ${values.firstName} ${values.lastName} (${values.role}) created successfully!`);
       setIsModalOpen(false);
       form.resetFields();
       fetchUsers();
     } catch (err: any) {
       message.error(err.message || 'Failed to create user');
+    }
+  };
+
+  const handleOpenEditUserModal = (record: UserItem) => {
+    setSelectedUser(record);
+    editForm.setFieldsValue({
+      firstName: record.firstName,
+      lastName: record.lastName,
+      email: record.email,
+      role: record.role,
+      department: record.department,
+      contractDays: record.contractDays || 65,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveUserEdits = async (values: any) => {
+    if (!selectedUser) return;
+    try {
+      await apiService.put(`/users/${selectedUser.id}`, {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+        role: values.role,
+        department: values.department,
+        contractDays: values.contractDays,
+      });
+      message.success(`User ${values.firstName} ${values.lastName} updated successfully!`);
+      setIsEditModalOpen(false);
+      fetchUsers();
+    } catch (err: any) {
+      message.error(err.message || 'Failed to update user');
     }
   };
 
@@ -107,7 +150,7 @@ const Users: React.FC = () => {
       key: 'name',
       render: (text: string, record: UserItem) => (
         <Space>
-          <Avatar style={{ backgroundColor: record.role === 'ADMIN' ? '#ef4444' : record.role === 'HR' ? '#8b5cf6' : record.role === 'MENTOR' ? '#3b82f6' : '#10b981' }}>
+          <Avatar style={{ backgroundColor: record.role === 'ADMIN' ? '#ef4444' : record.role === 'MENTOR' ? '#3b82f6' : '#10b981' }}>
             {text[0]}
           </Avatar>
           <div>
@@ -124,7 +167,6 @@ const Users: React.FC = () => {
       render: (role: string) => {
         const roleConfig: Record<string, { color: string; icon: any }> = {
           ADMIN: { color: 'red', icon: <CrownOutlined /> },
-          HR: { color: 'purple', icon: <SafetyCertificateOutlined /> },
           MENTOR: { color: 'blue', icon: <TeamOutlined /> },
           INTERN: { color: 'green', icon: <ReadOutlined /> },
         };
@@ -181,7 +223,9 @@ const Users: React.FC = () => {
               Customize Contract
             </Button>
           )}
-          <Button size="small" type="link" onClick={() => message.info(`Editing user ${record.name}`)}>Edit</Button>
+          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => handleOpenEditUserModal(record)}>
+            Edit
+          </Button>
         </Space>
       ),
     },
@@ -212,7 +256,6 @@ const Users: React.FC = () => {
           <Select value={roleFilter} onChange={setRoleFilter} style={{ width: 150 }}>
             <Select.Option value="ALL">All Roles</Select.Option>
             <Select.Option value="ADMIN">Admin</Select.Option>
-            <Select.Option value="HR">HR</Select.Option>
             <Select.Option value="MENTOR">Mentor</Select.Option>
             <Select.Option value="INTERN">Intern</Select.Option>
           </Select>
@@ -221,6 +264,7 @@ const Users: React.FC = () => {
         <Table columns={columns} dataSource={filteredUsers} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
       </Card>
 
+      {/* Add System User Modal */}
       <Modal
         title="Add New System User"
         open={isModalOpen}
@@ -229,6 +273,53 @@ const Users: React.FC = () => {
         okText="Add User"
       >
         <Form form={form} layout="vertical" onFinish={handleCreateUser} style={{ marginTop: 16 }}>
+          <Form.Item name="firstName" label="First Name" rules={[{ required: true, message: 'First name is required' }]}>
+            <Input placeholder="e.g. John" />
+          </Form.Item>
+          <Form.Item name="lastName" label="Last Name" rules={[{ required: true, message: 'Last name is required' }]}>
+            <Input placeholder="e.g. Doe" />
+          </Form.Item>
+          <Form.Item name="email" label="Email Address" rules={[{ required: true, message: 'Email is required' }, { type: 'email', message: 'Valid email required' }]}>
+            <Input placeholder="e.g. mentor@experimindlabs.com" />
+          </Form.Item>
+          <Form.Item name="password" label="Temporary Password">
+            <Input.Password placeholder="Default: password123" />
+          </Form.Item>
+          <Form.Item name="role" label="System Role" rules={[{ required: true, message: 'Role is required' }]}>
+            <Select placeholder="Select role">
+              <Select.Option value="INTERN">Intern</Select.Option>
+              <Select.Option value="MENTOR">Mentor</Select.Option>
+              <Select.Option value="ADMIN">Admin</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="department" label="Department">
+            <Input placeholder="e.g. Engineering" />
+          </Form.Item>
+
+          <Form.Item
+            noStyle
+            shouldUpdate={(prevValues, currentValues) => prevValues.role !== currentValues.role}
+          >
+            {({ getFieldValue }) =>
+              getFieldValue('role') === 'INTERN' ? (
+                <Form.Item name="totalProgramDays" label="Internship Contract Duration (Total Days)">
+                  <Input type="number" placeholder="Default: 65" />
+                </Form.Item>
+              ) : null
+            }
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Edit User Details Modal */}
+      <Modal
+        title={`Edit User Details — ${selectedUser?.name}`}
+        open={isEditModalOpen}
+        onCancel={() => setIsEditModalOpen(false)}
+        onOk={() => editForm.submit()}
+        okText="Save User Changes"
+      >
+        <Form form={editForm} layout="vertical" onFinish={handleSaveUserEdits} style={{ marginTop: 16 }}>
           <Form.Item name="firstName" label="First Name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
@@ -239,25 +330,24 @@ const Users: React.FC = () => {
             <Input />
           </Form.Item>
           <Form.Item name="role" label="Role" rules={[{ required: true }]}>
-            <Select placeholder="Select role">
+            <Select>
               <Select.Option value="INTERN">Intern</Select.Option>
               <Select.Option value="MENTOR">Mentor</Select.Option>
-              <Select.Option value="HR">HR</Select.Option>
               <Select.Option value="ADMIN">Admin</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item name="department" label="Department">
-            <Input placeholder="e.g. Engineering" />
+            <Input />
           </Form.Item>
-          
+
           <Form.Item
             noStyle
             shouldUpdate={(prevValues, currentValues) => prevValues.role !== currentValues.role}
           >
             {({ getFieldValue }) =>
               getFieldValue('role') === 'INTERN' ? (
-                <Form.Item name="totalProgramDays" label="Internship Duration (Total Days)" rules={[{ required: true, message: 'Please specify the internship duration in days' }]}>
-                  <Input type="number" placeholder="e.g. 65" />
+                <Form.Item name="contractDays" label="Contract Duration (Days)">
+                  <Input type="number" />
                 </Form.Item>
               ) : null
             }
