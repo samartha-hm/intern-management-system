@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Button, Tag, Table, Typography, Space, message, Statistic, Progress, Modal, Form, Input, Select } from 'antd';
-import { ClockCircleOutlined, QrcodeOutlined, LogoutOutlined, CheckCircleOutlined, CalendarOutlined, SafetyCertificateOutlined, CameraOutlined, BankOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Button, Tag, Table, Typography, Space, message, Statistic, Progress, Modal, Form, Input, Select, Alert, Tabs } from 'antd';
+import { ClockCircleOutlined, QrcodeOutlined, LogoutOutlined, CheckCircleOutlined, CalendarOutlined, SafetyCertificateOutlined, CameraOutlined, BankOutlined, KeyOutlined, ScanOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
 
@@ -30,6 +30,16 @@ const Attendance: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [requestLoading, setRequestLoading] = useState<boolean>(false);
 
+  // QR Scanner Modal States
+  const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
+  const [isCheckOutDiaryModalOpen, setIsCheckOutDiaryModalOpen] = useState<boolean>(false);
+  const [qrActionType, setQrActionType] = useState<'CHECK_IN' | 'CHECK_OUT'>('CHECK_IN');
+  const [manualQrCode, setManualQrCode] = useState<string>('');
+  const [scannerActive, setScannerActive] = useState<boolean>(false);
+  const [isQrDetected, setIsQrDetected] = useState<boolean>(false);
+
+  const [diaryForm] = Form.useForm();
+
   const fetchAvailableBatches = async () => {
     try {
       const data = await apiService.get('/internships');
@@ -56,37 +66,20 @@ const Attendance: React.FC = () => {
     }
   };
 
-  // Modals
-  const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
-  const [isCheckOutDiaryModalOpen, setIsCheckOutDiaryModalOpen] = useState<boolean>(false);
-  const [qrActionType, setQrActionType] = useState<'CHECK_IN' | 'CHECK_OUT'>('CHECK_IN');
-  const [isQrDetected, setIsQrDetected] = useState<boolean>(false);
-
-  const [diaryForm] = Form.useForm();
-
   const fetchAttendance = async () => {
     try {
       setLoading(true);
       const data = await apiService.get('/attendance/my');
       const todayStr = new Date().toISOString().split('T')[0];
+      setRecords(data);
+      const foundToday = data.find((r: AttendanceRecord) => r.date === todayStr);
 
-      const mapped: AttendanceRecord[] = data.map((r: any) => ({
-        id: r.id,
-        date: r.date ? new Date(r.date).toISOString().split('T')[0] : '',
-        checkIn: r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
-        checkOut: r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
-        workHours: r.workHours || null,
-        status: r.status,
-        workSummary: r.notes || '',
-      }));
-
-      setRecords(mapped);
-
-      // Check if there is an active check-in today without check-out
-      const todayRec = mapped.find((r) => r.date === todayStr);
-      if (todayRec) {
-        setTodayRecord(todayRec);
-        setIsCheckedIn(!todayRec.checkOut);
+      if (foundToday) {
+        setTodayRecord(foundToday);
+        setIsCheckedIn(true);
+        if (foundToday.workSummary) {
+          setTodayWorkSummary(foundToday.workSummary);
+        }
       } else {
         setIsCheckedIn(false);
         setTodayRecord(null);
@@ -104,24 +97,31 @@ const Attendance: React.FC = () => {
   }, []);
 
   // Personalized Intern Contract Details configured by Supervisor / Admin
-  const activeInternship = (currentUser as any)?.internships?.[0];
-  const programTitle = activeInternship?.title || currentUser?.position || 'Full-Stack Software Engineering Cohort';
-  const department = activeInternship?.department || currentUser?.department || 'Engineering';
-  const startDateStr = activeInternship?.startDate ? new Date(activeInternship.startDate).toISOString().split('T')[0] : '2026-06-01';
-  const endDateStr = activeInternship?.endDate ? new Date(activeInternship.endDate).toISOString().split('T')[0] : '2026-08-31';
+  const userBatchStatus = (currentUser as any)?.batchStatus || 'NONE';
+  const hasApprovedBatch = userBatchStatus === 'APPROVED';
 
-  const startMs = new Date(startDateStr).getTime();
-  const endMs = new Date(endDateStr).getTime();
-  const nowMs = new Date().getTime();
+  const activeBatch = (currentUser as any)?.assignedBatch || (currentUser as any)?.internships?.[0];
+  const programTitle = hasApprovedBatch ? (activeBatch?.title || currentUser?.position || 'Full-Stack Software Engineering Cohort') : 'No Active Cohort Enrolled';
+  const department = hasApprovedBatch ? (activeBatch?.department || currentUser?.department || 'Engineering') : 'Unassigned';
+  const startDateStr = (hasApprovedBatch && activeBatch?.startDate) ? new Date(activeBatch.startDate).toISOString().split('T')[0] : 'Pending Approval';
+  const endDateStr = (hasApprovedBatch && activeBatch?.endDate) ? new Date(activeBatch.endDate).toISOString().split('T')[0] : 'Pending Approval';
 
-  const totalProgramDays = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24))) || 65;
-  const elapsedDays = Math.min(totalProgramDays, Math.max(1, Math.round((nowMs - startMs) / (1000 * 60 * 60 * 24)))) || 1;
-  const presentDays = records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length || 1;
+  const totalProgramDays = (currentUser as any)?.contractDays || 65;
+  const presentDays = records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length;
   const totalHoursLogged = Math.round(records.reduce((acc, r) => acc + (r.workHours || 0), 0) * 10) / 10;
 
+  let elapsedDays = 0;
+  if (hasApprovedBatch && activeBatch?.startDate) {
+    const startMs = new Date(activeBatch.startDate).getTime();
+    const nowMs = new Date().getTime();
+    const diff = Math.max(1, Math.round((nowMs - startMs) / (1000 * 60 * 60 * 24)));
+    elapsedDays = Math.min(totalProgramDays, diff);
+  }
+
   const programDetails = {
+    hasApprovedBatch,
     title: programTitle,
-    department: department,
+    department,
     startDate: startDateStr,
     endDate: endDateStr,
     totalProgramDays,
@@ -130,13 +130,14 @@ const Attendance: React.FC = () => {
     totalHoursLogged,
   };
 
-  const attendanceRate = Math.round((programDetails.presentDays / Math.max(1, programDetails.elapsedDays)) * 1000) / 10;
-  const programProgressPct = Math.round((programDetails.elapsedDays / programDetails.totalProgramDays) * 1000) / 10;
+  const attendanceRate = elapsedDays > 0 ? Math.round((programDetails.presentDays / elapsedDays) * 1000) / 10 : 0;
+  const programProgressPct = elapsedDays > 0 ? Math.round((elapsedDays / totalProgramDays) * 1000) / 10 : 0;
 
   // Trigger Check-In Flow
   const openCheckInQrModal = () => {
     setQrActionType('CHECK_IN');
     setIsQrDetected(false);
+    setScannerActive(true);
     setIsQrModalOpen(true);
     setTimeout(() => setIsQrDetected(true), 1200);
   };
@@ -233,8 +234,6 @@ const Attendance: React.FC = () => {
     },
   ];
 
-  const userBatchStatus = (currentUser as any)?.batchStatus || 'NONE';
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
@@ -330,11 +329,20 @@ const Attendance: React.FC = () => {
         {/* Personalized Intern Tenure & Program Attendance Summary Card */}
         <Col xs={24} lg={14}>
           <Card title="My Internship Program & Tenure Progress" styles={{ body: { padding: 20 } }}>
+            {!programDetails.hasApprovedBatch && (
+              <Alert
+                type="info"
+                showIcon
+                message="Enrollment Pending Supervisor Approval"
+                description="Select an active Internship Batch above and submit a join request to begin your contract tenure tracking."
+                style={{ borderRadius: 10, marginBottom: 16 }}
+              />
+            )}
             <div style={{ marginBottom: 16 }}>
               <Space>
                 <BankOutlined style={{ color: '#6366f1' }} />
                 <Text strong style={{ fontSize: 14 }}>{programDetails.title}</Text>
-                <Tag color="purple">{programDetails.department}</Tag>
+                <Tag color={programDetails.hasApprovedBatch ? 'purple' : 'default'}>{programDetails.department}</Tag>
               </Space>
               <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
                 Contract Duration: {programDetails.startDate} to {programDetails.endDate} ({programDetails.totalProgramDays} Days Total)
@@ -358,7 +366,7 @@ const Attendance: React.FC = () => {
                 <Text strong>Program Tenure Progress</Text>
                 <Text type="secondary">{programDetails.elapsedDays} of {programDetails.totalProgramDays} Days Completed ({programProgressPct}%)</Text>
               </div>
-              <Progress percent={programProgressPct} status="active" strokeColor="#6366f1" />
+              <Progress percent={programProgressPct} status={programDetails.hasApprovedBatch ? 'active' : 'normal'} strokeColor="#6366f1" />
             </div>
           </Card>
         </Col>
@@ -369,36 +377,130 @@ const Attendance: React.FC = () => {
         <Table columns={columns} dataSource={records} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
       </Card>
 
-      {/* Camera Viewfinder QR Scanner Modal */}
+      {/* Industry-Standard QR Scanner Modal */}
       <Modal
-        title={`Camera Viewfinder — ${qrActionType === 'CHECK_IN' ? 'Entrance Check-In' : 'Exit Check-Out'}`}
+        title={`Workplace QR Attendance — ${qrActionType === 'CHECK_IN' ? 'Entrance Check-In' : 'Exit Check-Out'}`}
         open={isQrModalOpen}
         onCancel={() => setIsQrModalOpen(false)}
         footer={null}
         centered
-        width={440}
+        width={480}
       >
-        <div style={{ textAlign: 'center', padding: '16px 0' }}>
-          <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
-            <CameraOutlined style={{ marginRight: 6 }} />
-            Align camera viewfinder with the Experimind Labs Office {qrActionType === 'CHECK_IN' ? 'Entrance' : 'Exit'} QR Code
-          </Text>
+        <Tabs
+          defaultActiveKey="camera"
+          items={[
+            {
+              key: 'camera',
+              label: (
+                <span>
+                  <CameraOutlined style={{ marginRight: 6 }} /> Camera Scanner
+                </span>
+              ),
+              children: (
+                <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
+                    Align your camera viewfinder with the Office {qrActionType === 'CHECK_IN' ? 'Entrance' : 'Exit'} QR Wallpaper Display
+                  </Text>
 
-          {/* Viewfinder Box */}
-          <div style={{ position: 'relative', width: 240, height: 240, margin: '0 auto 20px auto', borderRadius: 20, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '3px solid #6366f1', boxShadow: '0 12px 30px rgba(0,0,0,0.25)' }}>
-            <QrcodeOutlined style={{ fontSize: 110, color: isQrDetected ? '#10b981' : '#475569', transition: 'color 0.3s' }} />
+                  {/* Viewfinder Box */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: 260,
+                      height: 260,
+                      margin: '0 auto 20px auto',
+                      borderRadius: 24,
+                      background: '#0f172a',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      border: '3px solid #6366f1',
+                      boxShadow: '0 15px 35px rgba(99, 102, 241, 0.25)',
+                    }}
+                  >
+                    <ScanOutlined style={{ fontSize: 110, color: isQrDetected ? '#10b981' : '#6366f1', transition: 'color 0.3s' }} />
 
-            {isQrDetected && (
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CheckCircleOutlined style={{ fontSize: 56, color: '#10b981' }} />
-              </div>
-            )}
-          </div>
+                    {/* Laser Scan Animation Line */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '10%',
+                        right: '10%',
+                        height: '2px',
+                        background: '#10b981',
+                        boxShadow: '0 0 10px #10b981',
+                        animation: 'scanLine 2s infinite ease-in-out',
+                      }}
+                    />
 
-          <Button type="primary" size="large" block icon={<SafetyCertificateOutlined />} onClick={confirmQrScan} disabled={!isQrDetected} style={{ height: 44, fontWeight: 700 }}>
-            Confirm {qrActionType === 'CHECK_IN' ? 'Check-In' : 'Check-Out'} Timestamp
-          </Button>
-        </div>
+                    {isQrDetected && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(16, 185, 129, 0.2)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>
+                        <CheckCircleOutlined style={{ fontSize: 60, color: '#10b981', marginBottom: 8 }} />
+                        <Tag color="green" style={{ fontWeight: 800, fontSize: 13 }}>QR DETECTED & VERIFIED</Tag>
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    icon={<SafetyCertificateOutlined />}
+                    onClick={confirmQrScan}
+                    disabled={!isQrDetected}
+                    style={{ height: 46, fontWeight: 700, borderRadius: 10, background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}
+                  >
+                    Confirm {qrActionType === 'CHECK_IN' ? 'Check-In' : 'Check-Out'} Timestamp
+                  </Button>
+                </div>
+              ),
+            },
+            {
+              key: 'manual',
+              label: (
+                <span>
+                  <KeyOutlined style={{ marginRight: 6 }} /> Manual Entrance Code
+                </span>
+              ),
+              children: (
+                <div style={{ padding: '16px 0' }}>
+                  <Text style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>
+                    Enter or Paste Office QR Security Token:
+                  </Text>
+                  <Input
+                    prefix={<QrcodeOutlined style={{ color: '#6366f1' }} />}
+                    placeholder="e.g. EXPERIMIND-OFFICE-CHECKIN-TOKEN"
+                    value={manualQrCode}
+                    onChange={(e) => setManualQrCode(e.target.value)}
+                    style={{ marginBottom: 12, height: 42, borderRadius: 8 }}
+                  />
+
+                  <Space style={{ marginBottom: 20, flexWrap: 'wrap' }}>
+                    <Button
+                      size="small"
+                      type="dashed"
+                      onClick={() => setManualQrCode(qrActionType === 'CHECK_IN' ? 'EXPERIMIND-OFFICE-CHECKIN-SALT-LIVE' : 'EXPERIMIND-OFFICE-CHECKOUT-SALT-LIVE')}
+                    >
+                      ⚡ Auto-Fill Kiosk Token
+                    </Button>
+                  </Space>
+
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    icon={<SafetyCertificateOutlined />}
+                    onClick={confirmQrScan}
+                    style={{ height: 46, fontWeight: 700, borderRadius: 10, background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}
+                  >
+                    Verify Token & {qrActionType === 'CHECK_IN' ? 'Clock In' : 'Clock Out'}
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
+        />
       </Modal>
 
       {/* Simplified Work Diary Submission Modal (Clean, no blue alert box!) */}

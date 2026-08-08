@@ -20,6 +20,9 @@ router.route('/')
   // Create notification
   .post(createNotification);
 
+// Get current user's notifications
+router.get('/my', getNotifications);
+
 // Get specific notification
 router.route('/:id')
   .get(getNotificationById)
