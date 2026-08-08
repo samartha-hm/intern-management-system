@@ -18,6 +18,10 @@ model User {
   role          Role     @default(INTERN)
   department    String?
   position      String?
+  contractDays  Int      @default(65)
+  batchStatus   BatchStatus @default(NONE)
+  assignedBatchId String?
+  assignedBatch   Internship? @relation("AssignedBatchInterns", fields: [assignedBatchId], references: [id])
   isActive      Boolean  @default(true)
   lastLogin     DateTime?
   resetPasswordToken   String?
@@ -44,6 +48,13 @@ model User {
   @@index([role])
 }
 
+enum BatchStatus {
+  NONE
+  REQUESTED
+  APPROVED
+  REJECTED
+}
+
 enum Role {
   ADMIN
   HR
@@ -65,9 +76,10 @@ model Internship {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  mentor       User          @relation("InternshipMentor", fields: [mentorId], references: [id])
-  interns      User[]        @relation("InternshipInterns")
-  applications Application[]
+  mentor          User          @relation("InternshipMentor", fields: [mentorId], references: [id])
+  interns         User[]        @relation("InternshipInterns")
+  assignedInterns User[]        @relation("AssignedBatchInterns")
+  applications    Application[]
   projects     Project[]
   evaluations  Evaluation[]
 

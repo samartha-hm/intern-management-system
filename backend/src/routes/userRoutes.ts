@@ -6,6 +6,10 @@ import {
   updateUser,
   deleteUser,
   updateUserPassword,
+  requestBatch,
+  getBatchRequests,
+  updateBatchStatus,
+  updateUserContract,
 } from '../controllers/userController';
 
 const router = express.Router();
@@ -13,8 +17,16 @@ const router = express.Router();
 // Protect all routes
 router.use(protect);
 
-// Admin only routes
-router.use(authorize('ADMIN'));
+// Intern batch request
+router.post('/request-batch', requestBatch);
+
+// Supervisor / Admin routes (ADMIN, MENTOR, HR)
+router.get('/batch-requests', authorize('ADMIN', 'MENTOR', 'HR'), getBatchRequests);
+router.put('/:id/batch-status', authorize('ADMIN', 'MENTOR', 'HR'), updateBatchStatus);
+router.put('/:id/contract', authorize('ADMIN', 'MENTOR', 'HR'), updateUserContract);
+
+// Admin only user management routes
+router.use(authorize('ADMIN', 'HR'));
 
 router.route('/')
   .get(getUsers);

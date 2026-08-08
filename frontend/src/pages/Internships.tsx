@@ -52,9 +52,44 @@ const Internships: React.FC = () => {
     }
   };
 
+  const [requests, setRequests] = useState<any[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [customDays, setCustomDays] = useState<number>(65);
+
+  const fetchBatchRequests = async () => {
+    try {
+      setRequestsLoading(true);
+      const reqs = await apiService.get('/users/batch-requests');
+      setRequests(reqs);
+    } catch {
+      // Ignore error
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchInternships();
+    fetchBatchRequests();
   }, []);
+
+  const handleApproveRequest = async (status: 'APPROVED' | 'REJECTED') => {
+    if (!selectedStudent) return;
+    try {
+      await apiService.put(`/users/${selectedStudent.id}/batch-status`, {
+        status,
+        contractDays: customDays,
+      });
+      message.success(`Student request ${status === 'APPROVED' ? 'Approved' : 'Rejected'}!`);
+      setApproveModalOpen(false);
+      fetchBatchRequests();
+      fetchInternships();
+    } catch (err: any) {
+      message.error(err.message || 'Action failed');
+    }
+  };
 
   const handleCreate = async (values: any) => {
     try {
@@ -160,19 +195,84 @@ const Internships: React.FC = () => {
     },
   ];
 
+  const requestColumns = [
+    {
+      title: 'Student Name',
+      key: 'name',
+      render: (r: any) => (
+        <div>
+          <Text strong>{r.firstName} {r.lastName}</Text>
+          <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{r.email}</Text>
+        </div>
+      ),
+    },
+    {
+      title: 'Requested Batch',
+      key: 'batch',
+      render: (r: any) => <Tag color="blue">{r.assignedBatch?.title || 'Unknown Batch'}</Tag>,
+    },
+    {
+      title: 'Department',
+      dataIndex: 'department',
+      key: 'department',
+      render: (d: string) => <Tag color="purple">{d || 'Engineering'}</Tag>,
+    },
+    {
+      title: 'Action & Custom Tenure',
+      key: 'action',
+      render: (r: any) => (
+        <Space>
+          <Button
+            type="primary"
+            size="small"
+            onClick={() => {
+              setSelectedStudent(r);
+              setCustomDays(r.contractDays || 65);
+              setApproveModalOpen(true);
+            }}
+          >
+            Accept & Set Days
+          </Button>
+          <Button
+            danger
+            size="small"
+            onClick={async () => {
+              setSelectedStudent(r);
+              handleApproveRequest('REJECTED');
+            }}
+          >
+            Reject
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <Title level={2} style={{ margin: 0, fontWeight: 800, color: '#0f172a' }}>Internship Programs</Title>
-          <Text type="secondary">Manage cohorts, mentors, and program allocations across departments</Text>
+          <Title level={2} style={{ margin: 0, fontWeight: 800, color: '#0f172a' }}>Internship Cohorts & Batch Control</Title>
+          <Text type="secondary">Manage active batches and approve student join requests with customizable contract days</Text>
         </div>
         <Button type="primary" size="large" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
           Create Internship Program
         </Button>
       </div>
 
-      <Card styles={{ body: { padding: 20 } }}>
+      {/* Pending Student Join Requests */}
+      <Card title="Pending Student Batch Join Requests" styles={{ body: { padding: 16 } }}>
+        <Table
+          columns={requestColumns}
+          dataSource={requests}
+          rowKey="id"
+          loading={requestsLoading}
+          pagination={false}
+          locale={{ emptyText: 'No pending student join requests' }}
+        />
+      </Card>
+
+      <Card title="Active Internship Batches" styles={{ body: { padding: 20 } }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
           <Input
             placeholder="Search by title or department..."
@@ -201,6 +301,31 @@ const Internships: React.FC = () => {
           pagination={{ pageSize: 8 }}
         />
       </Card>
+
+      {/* Approve Request Modal with Custom Contract Days */}
+      <Modal
+        title={`Approve Join Request — ${selectedStudent?.firstName} ${selectedStudent?.lastName}`}
+        open={approveModalOpen}
+        onCancel={() => setApproveModalOpen(false)}
+        onOk={() => handleApproveRequest('APPROVED')}
+        okText="Approve Student & Set Contract"
+      >
+        <div style={{ padding: '12px 0' }}>
+          <Text style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>
+            Custom Contract Duration for this Student (in Days):
+          </Text>
+          <Input
+            type="number"
+            value={customDays}
+            onChange={(e) => setCustomDays(Number(e.target.value))}
+            placeholder="e.g. 60, 90, 45"
+            style={{ width: '100%' }}
+          />
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>
+            Customize the contract tenure duration specifically for this student.
+          </Text>
+        </div>
+      </Modal>
 
       {/* Create Program Modal */}
       <Modal

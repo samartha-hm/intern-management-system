@@ -153,4 +153,137 @@ export const updateUserPassword = asyncHandler(async (req: Request, res: Respons
   }
 });
 
+// @desc    Intern request to join a batch
+// @route   POST /api/users/request-batch
+// @access  Private (Intern)
+export const requestBatch = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.id;
+  const { batchId } = req.body;
+
+  if (!batchId) {
+    res.status(400);
+    throw new Error('Batch ID is required');
+  }
+
+  const batch = await prisma.internship.findUnique({
+    where: { id: batchId },
+  });
+
+  if (!batch) {
+    res.status(404);
+    throw new Error('Internship batch not found');
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      assignedBatchId: batchId,
+      batchStatus: 'REQUESTED',
+      department: batch.department,
+    },
+  });
+
+  res.json({ message: 'Batch join request submitted successfully', user: updatedUser });
+});
+
+// @desc    Get all pending intern batch requests (Admin/Mentor)
+// @route   GET /api/users/batch-requests
+// @access  Private/Admin/Mentor
+export const getBatchRequests = asyncHandler(async (req: Request, res: Response) => {
+  const requests = await prisma.user.findMany({
+    where: {
+      batchStatus: 'REQUESTED',
+    },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      department: true,
+      contractDays: true,
+      batchStatus: true,
+      assignedBatchId: true,
+      assignedBatch: {
+        select: {
+          id: true,
+          title: true,
+          department: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json(requests);
+});
+
+// @desc    Approve or Reject intern batch request (Admin/Mentor)
+// @route   PUT /api/users/:id/batch-status
+// @access  Private/Admin/Mentor
+export const updateBatchStatus = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { status, contractDays } = req.body; // 'APPROVED' or 'REJECTED'
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+  });
+
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const dataToUpdate: any = {
+    batchStatus: status,
+  };
+
+  if (contractDays && typeof contractDays === 'number') {
+    dataToUpdate.contractDays = contractDays;
+  }
+
+  const updated = await prisma.user.update({
+    where: { id },
+    data: dataToUpdate,
+  });
+
+  res.json(updated);
+});
+
+// @desc    Update student custom contract days and assigned batch (Admin/Mentor)
+// @route   PUT /api/users/:id/contract
+// @access  Private/Admin/Mentor
+export const updateUserContract = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { contractDays, assignedBatchId, department, position } = req.body;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+  });
+
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const dataToUpdate: any = {};
+
+  if (contractDays !== undefined) dataToUpdate.contractDays = Number(contractDays);
+  if (assignedBatchId !== undefined) {
+    dataToUpdate.assignedBatchId = assignedBatchId;
+    dataToUpdate.batchStatus = 'APPROVED';
+  }
+  if (department !== undefined) dataToUpdate.department = department;
+  if (position !== undefined) dataToUpdate.position = position;
+
+  const updated = await prisma.user.update({
+    where: { id },
+    data: dataToUpdate,
+  });
+
+  res.json(updated);
+});
+
 export { protect, authorize };

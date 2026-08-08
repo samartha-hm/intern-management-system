@@ -110,43 +110,22 @@ const App: React.FC = () => {
 
     const items: any[] = [];
 
-    if (currentUser.role === 'ADMIN' || currentUser.role === 'HR') {
+    if (currentUser.role === 'ADMIN' || currentUser.role === 'HR' || currentUser.role === 'MENTOR') {
       items.push(
-        { key: '/dashboard', icon: <DashboardOutlined />, label: <Link to="/dashboard">Dashboard</Link> },
-        { key: '/projects', icon: <ProjectOutlined />, label: <Link to="/projects">Projects & Kanban</Link> },
-        { key: '/evaluations', icon: <TrophyOutlined />, label: <Link to="/evaluations">Evaluations</Link> },
-        { key: '/documents', icon: <FolderOpenOutlined />, label: <Link to="/documents">Document Vault</Link> },
-        { key: '/internships', icon: <TeamOutlined />, label: <Link to="/internships">Internships</Link> },
-        { key: '/applications', icon: <FormOutlined />, label: <Link to="/applications">Applications</Link> },
-        { key: '/attendance-review', icon: <ClockCircleOutlined />, label: <Link to="/attendance-review">Attendance Audit</Link> },
-        { key: '/work-diary-review', icon: <CheckSquareOutlined />, label: <Link to="/work-diary-review">Work Diary Reviews</Link> },
-        { key: '/qr-kiosk/entrance', icon: <QrcodeOutlined />, label: <Link to="/qr-kiosk/entrance">Office Entrance Kiosk</Link> },
-        { key: '/qr-kiosk/exit', icon: <QrcodeOutlined />, label: <Link to="/qr-kiosk/exit">Office Exit Kiosk</Link> },
-        { key: '/users', icon: <UserOutlined />, label: <Link to="/users">User Directory</Link> },
-        { key: '/reports', icon: <NotificationOutlined />, label: <Link to="/reports">Reports & Compliance</Link> },
-        { key: '/profile', icon: <IdcardOutlined />, label: <Link to="/profile">My Profile</Link> }
-      );
-    } else if (currentUser.role === 'MENTOR') {
-      items.push(
-        { key: '/internships', icon: <TeamOutlined />, label: <Link to="/internships">My Interns</Link> },
-        { key: '/projects', icon: <ProjectOutlined />, label: <Link to="/projects">Projects & Kanban</Link> },
-        { key: '/evaluations', icon: <TrophyOutlined />, label: <Link to="/evaluations">Intern Evaluations</Link> },
-        { key: '/documents', icon: <FolderOpenOutlined />, label: <Link to="/documents">Document Vault</Link> },
+        { key: '/dashboard', icon: <DashboardOutlined />, label: <Link to="/dashboard">Dashboard & Overview</Link> },
+        { key: '/internships', icon: <TeamOutlined />, label: <Link to="/internships">Batches & Join Requests</Link> },
+        { key: '/users', icon: <UserOutlined />, label: <Link to="/users">Student Directory & Contracts</Link> },
         { key: '/attendance-review', icon: <ClockCircleOutlined />, label: <Link to="/attendance-review">Attendance Supervision</Link> },
-        { key: '/work-diary-review', icon: <CheckSquareOutlined />, label: <Link to="/work-diary-review">Work Diary Approvals</Link> },
-        { key: '/qr-kiosk/entrance', icon: <QrcodeOutlined />, label: <Link to="/qr-kiosk/entrance">Office Entrance Kiosk</Link> },
-        { key: '/qr-kiosk/exit', icon: <QrcodeOutlined />, label: <Link to="/qr-kiosk/exit">Office Exit Kiosk</Link> },
-        { key: '/reports', icon: <NotificationOutlined />, label: <Link to="/reports">Reports</Link> },
+        { key: '/work-diary-review', icon: <CheckSquareOutlined />, label: <Link to="/work-diary-review">Work Diary Reviews</Link> },
+        { key: '/qr-kiosk/entrance', icon: <QrcodeOutlined />, label: <Link to="/qr-kiosk/entrance">Entrance Kiosk</Link> },
+        { key: '/qr-kiosk/exit', icon: <QrcodeOutlined />, label: <Link to="/qr-kiosk/exit">Exit Kiosk</Link> },
         { key: '/profile', icon: <IdcardOutlined />, label: <Link to="/profile">My Profile</Link> }
       );
-    } else if (currentUser.role === 'INTERN') {
+    } else {
       items.push(
-        { key: '/attendance', icon: <ClockCircleOutlined />, label: <Link to="/attendance">Daily Attendance</Link> },
-        { key: '/work-diary', icon: <BookOutlined />, label: <Link to="/work-diary">Daily Work Diary</Link> },
-        { key: '/projects', icon: <ProjectOutlined />, label: <Link to="/projects">My Projects & Tasks</Link> },
-        { key: '/evaluations', icon: <TrophyOutlined />, label: <Link to="/evaluations">My Scorecard</Link> },
-        { key: '/documents', icon: <FolderOpenOutlined />, label: <Link to="/documents">My Documents</Link> },
-        { key: '/profile', icon: <IdcardOutlined />, label: <Link to="/profile">My Profile & Settings</Link> }
+        { key: '/attendance', icon: <ClockCircleOutlined />, label: <Link to="/attendance">Attendance & Tenure</Link> },
+        { key: '/work-diary', icon: <BookOutlined />, label: <Link to="/work-diary">My Work Diaries</Link> },
+        { key: '/profile', icon: <IdcardOutlined />, label: <Link to="/profile">My Profile</Link> }
       );
     }
 

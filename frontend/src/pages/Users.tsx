@@ -11,6 +11,7 @@ interface UserItem {
   email: string;
   role: 'ADMIN' | 'HR' | 'MENTOR' | 'INTERN';
   department: string;
+  contractDays?: number;
   isActive: boolean;
   totalProgramDays?: number;
 }
@@ -23,6 +24,10 @@ const Users: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
 
+  const [contractModalOpen, setContractModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [editDays, setEditDays] = useState<number>(65);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -33,6 +38,7 @@ const Users: React.FC = () => {
         email: u.email,
         role: u.role,
         department: u.department || 'General',
+        contractDays: u.contractDays || 65,
         isActive: u.isActive,
       }));
       setUsers(mapped);
@@ -46,6 +52,20 @@ const Users: React.FC = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const handleUpdateContract = async () => {
+    if (!selectedUser) return;
+    try {
+      await apiService.put(`/users/${selectedUser.id}/contract`, {
+        contractDays: editDays,
+      });
+      message.success(`Custom contract updated to ${editDays} days for ${selectedUser.name}!`);
+      setContractModalOpen(false);
+      fetchUsers();
+    } catch (err: any) {
+      message.error(err.message || 'Failed to update contract');
+    }
+  };
 
   const handleCreateUser = async (values: any) => {
     try {
@@ -136,10 +156,31 @@ const Users: React.FC = () => {
       ),
     },
     {
+      title: 'Contract Days',
+      dataIndex: 'contractDays',
+      key: 'contractDays',
+      render: (days: number, record: UserItem) => (
+        record.role === 'INTERN' ? <Tag color="cyan" style={{ fontWeight: 700 }}>{days || 65} Days</Tag> : '-'
+      ),
+    },
+    {
       title: 'Actions',
       key: 'actions',
       render: (_: any, record: UserItem) => (
         <Space>
+          {record.role === 'INTERN' && (
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                setSelectedUser(record);
+                setEditDays(record.contractDays || 65);
+                setContractModalOpen(true);
+              }}
+            >
+              Customize Contract
+            </Button>
+          )}
           <Button size="small" type="link" onClick={() => message.info(`Editing user ${record.name}`)}>Edit</Button>
         </Space>
       ),
@@ -222,6 +263,31 @@ const Users: React.FC = () => {
             }
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Edit Student Contract Modal */}
+      <Modal
+        title={`Customize Contract Duration — ${selectedUser?.name}`}
+        open={contractModalOpen}
+        onCancel={() => setContractModalOpen(false)}
+        onOk={handleUpdateContract}
+        okText="Save Contract"
+      >
+        <div style={{ padding: '12px 0' }}>
+          <Text style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>
+            Program Contract Tenure Duration for this Student (in Days):
+          </Text>
+          <Input
+            type="number"
+            value={editDays}
+            onChange={(e) => setEditDays(Number(e.target.value))}
+            placeholder="e.g. 60, 90, 120"
+            style={{ width: '100%' }}
+          />
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>
+            Customize the contract tenure duration specifically for {selectedUser?.name}.
+          </Text>
+        </div>
       </Modal>
     </div>
   );

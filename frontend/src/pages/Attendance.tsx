@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Button, Tag, Table, Typography, Space, message, Statistic, Progress, Modal, Form, Input } from 'antd';
+import { Card, Row, Col, Button, Tag, Table, Typography, Space, message, Statistic, Progress, Modal, Form, Input, Select } from 'antd';
 import { ClockCircleOutlined, QrcodeOutlined, LogoutOutlined, CheckCircleOutlined, CalendarOutlined, SafetyCertificateOutlined, CameraOutlined, BankOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
@@ -24,6 +24,37 @@ const Attendance: React.FC = () => {
   const [isCheckedIn, setIsCheckedIn] = useState<boolean>(false);
   const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
   const [todayWorkSummary, setTodayWorkSummary] = useState<string>('');
+
+  // Batch Request States
+  const [availableBatches, setAvailableBatches] = useState<any[]>([]);
+  const [selectedBatchId, setSelectedBatchId] = useState<string>('');
+  const [requestLoading, setRequestLoading] = useState<boolean>(false);
+
+  const fetchAvailableBatches = async () => {
+    try {
+      const data = await apiService.get('/internships');
+      setAvailableBatches(data);
+    } catch {
+      // Ignore error
+    }
+  };
+
+  const handleRequestBatchSubmit = async () => {
+    if (!selectedBatchId) {
+      message.warning('Please select an internship batch to join');
+      return;
+    }
+    try {
+      setRequestLoading(true);
+      await apiService.post('/users/request-batch', { batchId: selectedBatchId });
+      message.success('Batch join request submitted to Admin/Supervisor!');
+      window.location.reload();
+    } catch (err: any) {
+      message.error(err.message || 'Failed to submit batch request');
+    } finally {
+      setRequestLoading(false);
+    }
+  };
 
   // Modals
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
@@ -69,6 +100,7 @@ const Attendance: React.FC = () => {
 
   useEffect(() => {
     fetchAttendance();
+    fetchAvailableBatches();
   }, []);
 
   // Personalized Intern Contract Details configured by Supervisor / Admin
@@ -201,12 +233,64 @@ const Attendance: React.FC = () => {
     },
   ];
 
+  const userBatchStatus = (currentUser as any)?.batchStatus || 'NONE';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <Title level={2} style={{ margin: 0, fontWeight: 800, color: '#0f172a' }}>Office QR Attendance Clock</Title>
         <Text type="secondary">Scan Entrance / Exit Office QR wallpapers to clock in and out daily</Text>
       </div>
+
+      {userBatchStatus !== 'APPROVED' && (
+        <Card
+          title="Internship Batch Join Request"
+          style={{ border: '2px solid #6366f1', background: 'linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%)' }}
+        >
+          {userBatchStatus === 'REQUESTED' ? (
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <Tag color="processing" style={{ fontSize: 14, padding: '6px 16px', borderRadius: 20, marginBottom: 12 }}>
+                ⏳ REQUEST PENDING SUPERVISOR / ADMIN APPROVAL
+              </Tag>
+              <Title level={4} style={{ margin: '8px 0', color: '#4338ca' }}>
+                Your request to join batch "{(currentUser as any)?.assignedBatch?.title || 'Selected Cohort'}" has been submitted.
+              </Title>
+              <Text type="secondary">
+                An Admin or Supervisor will review your request, approve your enrollment, and configure your custom program tenure.
+              </Text>
+            </div>
+          ) : (
+            <div>
+              <Text style={{ display: 'block', marginBottom: 12, fontWeight: 600 }}>
+                Please select an active Internship Batch / Cohort to request enrollment:
+              </Text>
+              <Space style={{ width: '100%', flexWrap: 'wrap' }}>
+                <Select
+                  placeholder="Select an Internship Batch..."
+                  style={{ width: 320 }}
+                  value={selectedBatchId}
+                  onChange={setSelectedBatchId}
+                >
+                  {availableBatches.map((b: any) => (
+                    <Select.Option key={b.id} value={b.id}>
+                      {b.title} ({b.department})
+                    </Select.Option>
+                  ))}
+                </Select>
+                <Button
+                  type="primary"
+                  icon={<QrcodeOutlined />}
+                  onClick={handleRequestBatchSubmit}
+                  loading={requestLoading}
+                  style={{ fontWeight: 700 }}
+                >
+                  Submit Join Request
+                </Button>
+              </Space>
+            </div>
+          )}
+        </Card>
+      )}
 
       <Row gutter={[20, 20]}>
         {/* Clock Card */}
@@ -234,7 +318,7 @@ const Attendance: React.FC = () => {
 
             {todayRecord?.checkIn && (
               <div style={{ marginTop: 16, padding: '12px 14px', background: '#f8fafc', borderRadius: 10, textAlign: 'left', fontSize: 13, border: '1px solid #e2e8f0' }}>
-                <Text style={{ display: 'block' }}>Status: <Tag color={todayRecord.status === 'LATE' ? 'gold' : 'green'}>{todayRecord.status}</Tag></Text>
+                <Text style={{ display: 'block' }}>Status: <Tag color="green">{todayRecord.status}</Tag></Text>
                 <Text style={{ display: 'block', marginTop: 4 }}>
                   Work Summary: {todayWorkSummary ? <Tag color="green">LOGGED</Tag> : <Tag color="orange">REQUIRED AT CHECK-OUT</Tag>}
                 </Text>
