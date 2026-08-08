@@ -70,9 +70,29 @@ const Internships: React.FC = () => {
     }
   };
 
+  const [mentors, setMentors] = useState<any[]>([]);
+
+  const fetchMentors = async () => {
+    try {
+      const users = await apiService.get('/users');
+      const filtered = users
+        .filter((u: any) => u.role === 'MENTOR' || u.role === 'ADMIN')
+        .map((u: any) => ({
+          id: u.id,
+          name: `${u.firstName} ${u.lastName}`,
+          role: u.role,
+          email: u.email,
+        }));
+      setMentors(filtered);
+    } catch {
+      // Ignore
+    }
+  };
+
   useEffect(() => {
     fetchInternships();
     fetchBatchRequests();
+    fetchMentors();
   }, []);
 
   const handleApproveRequest = async (status: 'APPROVED' | 'REJECTED') => {
@@ -95,12 +115,9 @@ const Internships: React.FC = () => {
     try {
       await apiService.post('/internships', {
         title: values.title,
-        description: values.description || values.title,
-        department: values.department,
+        description: values.title,
+        department: values.department || 'General',
         mentorId: values.mentorId || currentUser?.id,
-        startDate: values.dates ? values.dates[0].toISOString() : new Date().toISOString(),
-        endDate: values.dates ? values.dates[1].toISOString() : new Date(Date.now() + 90 * 86400000).toISOString(),
-        maxInterns: values.maxInterns || 5,
       });
       message.success('Internship program created successfully!');
       setIsModalOpen(false);
@@ -143,16 +160,15 @@ const Internships: React.FC = () => {
       title: 'Department',
       dataIndex: 'department',
       key: 'department',
-      render: (dept: string) => <Tag color="geekblue" style={{ fontWeight: 600 }}>{dept}</Tag>,
+      render: (dept: string) => <Tag color="geekblue" style={{ fontWeight: 600 }}>{dept || 'General'}</Tag>,
     },
     {
-      title: 'Capacity',
+      title: 'Enrolled Interns',
       key: 'capacity',
       render: (_: any, record: InternshipItem) => (
-        <div style={{ width: 100 }}>
-          <Text style={{ fontSize: 12, fontWeight: 600 }}>{record.internsCount} / {record.maxInterns} Allocated</Text>
-          <Progress percent={Math.round((record.internsCount / record.maxInterns) * 100)} size="small" strokeColor="#6366f1" />
-        </div>
+        <Tag color="purple" style={{ fontWeight: 700 }}>
+          {record.internsCount} Interns Enrolled
+        </Tag>
       ),
     },
     {
@@ -336,12 +352,12 @@ const Internships: React.FC = () => {
         okText="Create Program"
       >
         <Form form={form} layout="vertical" onFinish={handleCreate} style={{ marginTop: 16 }}>
-          <Form.Item name="title" label="Program Title" rules={[{ required: true, message: 'Title is required' }]}>
+          <Form.Item name="title" label="Program Title" rules={[{ required: true, message: 'Program Title is required' }]}>
             <Input placeholder="e.g. Full Stack Engineering Program" />
           </Form.Item>
 
-          <Form.Item name="department" label="Department" rules={[{ required: true, message: 'Department is required' }]}>
-            <Select placeholder="Select department">
+          <Form.Item name="department" label="Department (Optional)">
+            <Select placeholder="Select department (Optional)" allowClear>
               <Select.Option value="Engineering">Engineering</Select.Option>
               <Select.Option value="Data Science">Data Science</Select.Option>
               <Select.Option value="Product UI">Product UI</Select.Option>
@@ -350,12 +366,14 @@ const Internships: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item name="mentor" label="Assigned Mentor">
-            <Input placeholder="e.g. Jane Smith" />
-          </Form.Item>
-
-          <Form.Item name="maxInterns" label="Max Intern Capacity">
-            <Input type="number" defaultValue={5} min={1} />
+          <Form.Item name="mentorId" label="Assigned Mentor (Optional)">
+            <Select placeholder="Select existing mentor (Optional)" allowClear>
+              {mentors.map((m) => (
+                <Select.Option key={m.id} value={m.id}>
+                  {m.name} ({m.role}) — {m.email}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

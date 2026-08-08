@@ -94,31 +94,37 @@ export const getInternshipById = asyncHandler(async (req: Request, res: Response
 export const createInternship = asyncHandler(async (req: Request, res: Response) => {
   const { title, description, department, mentorId, startDate, endDate, maxInterns } = req.body;
 
-  // Validate mentor exists
-  const mentor = await prisma.user.findUnique({
-    where: { id: mentorId },
-  });
-
-  if (!mentor) {
+  if (!title) {
     res.status(400);
-    throw new Error('Mentor not found');
+    throw new Error('Program Title is required');
   }
 
-  // Ensure mentor role is MENTOR
-  if (mentor.role !== 'MENTOR') {
-    res.status(400);
-    throw new Error('Assigned user is not a mentor');
+  let assignedMentorId = mentorId;
+
+  // Validate mentor exists if mentorId provided; otherwise default to logged in user
+  if (assignedMentorId) {
+    const mentor = await prisma.user.findUnique({
+      where: { id: assignedMentorId },
+    });
+    if (!mentor) {
+      assignedMentorId = req.user!.id;
+    }
+  } else {
+    assignedMentorId = req.user!.id;
   }
+
+  const start = startDate ? new Date(startDate) : new Date();
+  const end = endDate ? new Date(endDate) : new Date(Date.now() + 90 * 86400000);
 
   const internship = await prisma.internship.create({
     data: {
       title,
-      description,
-      department,
-      mentorId,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      maxInterns: maxInterns || 1,
+      description: description || title,
+      department: department || 'General',
+      mentorId: assignedMentorId,
+      startDate: start,
+      endDate: end,
+      maxInterns: maxInterns ? Number(maxInterns) : 999,
     },
   });
 
