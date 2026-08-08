@@ -43,6 +43,7 @@ model User {
   workDiaries          WorkDiary[]    @relation("UserWorkDiary")
   notifications        Notification[] @relation("NotificationRecipient")
   sentNotifications    Notification[] @relation("NotificationSender")
+  refreshTokens        RefreshToken[]
 
   @@index([email])
   @@index([role])
@@ -327,4 +328,47 @@ enum DiaryStatus {
   SUBMITTED
   REVIEWED
   APPROVED
+}
+
+enum AttendanceKind {
+  ENTRANCE
+  EXIT
+}
+
+model QrNonce {
+  id         String         @id @default(uuid())
+  code       String         @unique
+  kind       AttendanceKind
+  validUntil DateTime
+  isUsed     Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+
+  @@index([code])
+  @@index([validUntil])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
 }

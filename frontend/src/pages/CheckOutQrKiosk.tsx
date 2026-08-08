@@ -2,23 +2,40 @@ import React, { useState, useEffect } from 'react';
 import { Card, Typography, Space, Button, Tag, QRCode, Progress } from 'antd';
 import { FullscreenOutlined, SafetyCertificateOutlined, LogoutOutlined, PrinterOutlined, SyncOutlined } from '@ant-design/icons';
 
+import apiService from '../services/apiService';
+
 const { Title, Text } = Typography;
 
 const CheckOutQrKiosk: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [refreshCountdown, setRefreshCountdown] = useState(30);
-  const [securitySalt, setSecuritySalt] = useState(Math.floor(Date.now() / 30000));
+  const [serverNonce, setServerNonce] = useState<string>('');
+
+  const fetchServerNonce = async () => {
+    try {
+      const res = await apiService.get('/attendance/qr-nonce?kind=EXIT');
+      if (res && res.nonce) {
+        setServerNonce(res.nonce);
+      }
+    } catch {
+      // Ignore
+    }
+  };
 
   useEffect(() => {
+    fetchServerNonce();
+    const nonceInterval = setInterval(fetchServerNonce, 30000);
     const timer = setInterval(() => {
       const now = new Date();
       setCurrentTime(now);
       const remainingSecs = 30 - (Math.floor(now.getTime() / 1000) % 30);
       setRefreshCountdown(remainingSecs);
-      setSecuritySalt(Math.floor(now.getTime() / 30000));
     }, 1000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      clearInterval(nonceInterval);
+    };
   }, []);
 
   const toggleFullscreen = () => {
@@ -40,8 +57,8 @@ const CheckOutQrKiosk: React.FC = () => {
   const checkOutPayload = JSON.stringify({
     type: 'CHECK_OUT',
     office: 'EXPERIMIND_LABS_HQ',
-    token: `EXPERIMIND-OFFICE-CHECKOUT-SALT-${securitySalt}`,
-    date: currentTime.toISOString().split('T')[0],
+    nonce: serverNonce || `EXIT-${Date.now()}`,
+    timestamp: currentTime.toISOString(),
   });
 
   return (

@@ -17,11 +17,10 @@ export const errorHandler = (
   let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   let message = err.message || 'Internal Server Error';
 
-  // Handle Prisma unique constraint violation (e.g. duplicate email)
+  // Handle Prisma unique constraint violation
   if (err.code === 'P2002') {
     statusCode = 400;
-    const target = err.meta?.target ? ` (${err.meta.target.join(', ')})` : '';
-    message = `A record with this value already exists${target}.`;
+    message = 'A record with this unique value already exists.';
   }
 
   // Handle Prisma record not found error
@@ -30,12 +29,18 @@ export const errorHandler = (
     message = 'Requested record was not found.';
   }
 
-  res.status(statusCode);
+  // Handle Prisma foreign key or payload validation errors
+  if (err.code === 'P2003' || err.code === 'P2000' || err.code === 'P2014') {
+    statusCode = 400;
+    message = 'Invalid data reference or constraint violation.';
+  }
+
   const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
 
-  res.json({
+  res.status(statusCode).json({
+    status: 'error',
     message,
-    stack: isProduction ? null : err.stack,
+    ...(isProduction ? {} : { stack: err.stack }),
   });
 };
 

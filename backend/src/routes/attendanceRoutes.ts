@@ -1,6 +1,7 @@
 import express from 'express';
 import { protect, authorize } from '../middleware/authMiddleware';
 import {
+  generateQrNonce,
   checkIn,
   checkOut,
   getMyAttendance,
@@ -9,6 +10,9 @@ import {
 } from '../controllers/attendanceController';
 
 const router = express.Router();
+
+// Kiosk public/authenticated QR Nonce generator
+router.get('/qr-nonce', generateQrNonce);
 
 router.post('/check-in', protect, checkIn);
 router.post('/check-out', protect, checkOut);

@@ -25,7 +25,7 @@ export const getDashboardStats = asyncHandler(async (req: Request, res: Response
     select: { overallRating: true },
   });
 
-  let avgPerformanceScore = 92;
+  let avgPerformanceScore: number | null = null;
   if (evaluations.length > 0) {
     const validRatings = evaluations.filter((e) => e.overallRating !== null);
     if (validRatings.length > 0) {

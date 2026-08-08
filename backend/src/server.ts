@@ -18,6 +18,14 @@ import attendanceRoutes from './routes/attendanceRoutes';
 import workDiaryRoutes from './routes/workDiaryRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 
+// Process-level uncaught exception safety handlers
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UNHANDLED REJECTION]', reason);
+});
+
 // Load environment variables
 dotenv.config();
 
@@ -33,20 +41,24 @@ app.use(cookieParser());
 // Security headers
 app.use(helmet());
 
+// Strict CORS Origin Validation (Exact Match)
+const envOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean);
 const allowedOrigins = [
+  ...envOrigins,
   process.env.FRONTEND_URL || 'https://intern-management-system-beta.vercel.app',
   'https://intern-management-system-beta.vercel.app',
   'http://localhost:3000',
   'http://localhost:3001',
 ];
-const corsOptions = {
+
+const corsOptions: cors.CorsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Allow requests with no origin (mobile apps, Postman, curl)
+    // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.some(allowed => origin.startsWith(allowed) || origin.endsWith('.vercel.app'))) {
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS policy'));
+      callback(new Error(`CORS Policy Violation: Origin '${origin}' is not authorized`));
     }
   },
   credentials: true,

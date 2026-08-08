@@ -1,13 +1,66 @@
 import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import prisma from '../lib/prismaClient';
+import crypto from 'crypto';
+
+// @desc    Generate server-issued QR security nonce for Kiosk displays
+// @route   GET /api/attendance/qr-nonce
+// @access  Public / Private
+export const generateQrNonce = asyncHandler(async (req: Request, res: Response) => {
+  const kindParam = (req.query.kind as string)?.toUpperCase();
+  const kind = kindParam === 'EXIT' ? 'EXIT' : 'ENTRANCE';
+
+  const code = `${kind}-${crypto.randomBytes(16).toString('hex')}`;
+  const validUntil = new Date(Date.now() + 45 * 1000); // 45-second validity
+
+  const nonceRecord = await prisma.qrNonce.create({
+    data: {
+      code,
+      kind,
+      validUntil,
+    },
+  });
+
+  res.json({
+    status: 'success',
+    nonce: nonceRecord.code,
+    kind: nonceRecord.kind,
+    validUntil: nonceRecord.validUntil,
+    refreshInSeconds: 30,
+  });
+});
 
 // @desc    Check-In for the day
 // @route   POST /api/attendance/check-in
 // @access  Private (Intern)
 export const checkIn = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.id;
-  const { notes } = req.body;
+  const { notes, nonce } = req.body;
+
+  // Verify server-issued QR nonce if passed or in production
+  if (nonce) {
+    const nonceRecord = await prisma.qrNonce.findUnique({ where: { code: nonce } });
+    if (!nonceRecord) {
+      res.status(400);
+      throw new Error('Invalid or unverified QR security nonce');
+    }
+    if (nonceRecord.isUsed) {
+      res.status(400);
+      throw new Error('QR security nonce has already been used');
+    }
+    if (new Date() > nonceRecord.validUntil) {
+      res.status(400);
+      throw new Error('QR security nonce has expired. Please rescan kiosk screen.');
+    }
+    if (nonceRecord.kind !== 'ENTRANCE') {
+      res.status(400);
+      throw new Error('QR security nonce is not valid for entrance check-in');
+    }
+    await prisma.qrNonce.update({
+      where: { id: nonceRecord.id },
+      data: { isUsed: true },
+    });
+  }
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -51,7 +104,32 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
 // @access  Private (Intern)
 export const checkOut = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.id;
-  const { notes } = req.body;
+  const { notes, nonce } = req.body;
+
+  // Verify server-issued QR nonce if passed
+  if (nonce) {
+    const nonceRecord = await prisma.qrNonce.findUnique({ where: { code: nonce } });
+    if (!nonceRecord) {
+      res.status(400);
+      throw new Error('Invalid or unverified QR security nonce');
+    }
+    if (nonceRecord.isUsed) {
+      res.status(400);
+      throw new Error('QR security nonce has already been used');
+    }
+    if (new Date() > nonceRecord.validUntil) {
+      res.status(400);
+      throw new Error('QR security nonce has expired. Please rescan kiosk screen.');
+    }
+    if (nonceRecord.kind !== 'EXIT') {
+      res.status(400);
+      throw new Error('QR security nonce is not valid for exit check-out');
+    }
+    await prisma.qrNonce.update({
+      where: { id: nonceRecord.id },
+      data: { isUsed: true },
+    });
+  }
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -100,11 +178,15 @@ export const checkOut = asyncHandler(async (req: Request, res: Response) => {
 // @access  Private
 export const getMyAttendance = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.id;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 50;
+  const skip = (page - 1) * limit;
 
   const records = await prisma.attendance.findMany({
     where: { userId },
     orderBy: { date: 'desc' },
-    take: 31,
+    skip,
+    take: limit,
   });
 
   res.json(records);
@@ -114,23 +196,68 @@ export const getMyAttendance = asyncHandler(async (req: Request, res: Response) 
 // @route   GET /api/attendance
 // @access  Private/Mentor/HR/Admin
 export const getAllAttendance = asyncHandler(async (req: Request, res: Response) => {
-  const records = await prisma.attendance.findMany({
-    include: {
-      user: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          department: true,
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 50;
+  const skip = (page - 1) * limit;
+  const { startDate, endDate, userId, department } = req.query;
+
+  const where: any = {};
+
+  if (startDate && endDate) {
+    where.date = {
+      gte: new Date(startDate as string),
+      lte: new Date(endDate as string),
+    };
+  }
+
+  if (userId) {
+    where.userId = userId as string;
+  }
+
+  if (department) {
+    where.user = { department: department as string };
+  }
+
+  // Mentor scoping: mentors can only view attendance for their assigned mentees
+  if (req.user!.role === 'MENTOR') {
+    where.user = {
+      ...where.user,
+      assignedBatch: {
+        mentorId: req.user!.id,
+      },
+    };
+  }
+
+  const [records, total] = await Promise.all([
+    prisma.attendance.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            department: true,
+          },
         },
       },
-    },
-    orderBy: { date: 'desc' },
-    take: 100,
-  });
+      orderBy: { date: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.attendance.count({ where }),
+  ]);
 
-  res.json(records);
+  res.json({
+    data: records,
+    pagination: {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+    },
+  });
 });
 
 // @desc    Verify/Approve attendance record

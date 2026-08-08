@@ -23,6 +23,26 @@ const generateRefreshToken = (id: string) => {
   });
 };
 
+// Store refresh token in DB
+const saveRefreshToken = async (userId: string, refreshToken: string) => {
+  const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash,
+      userId,
+      expiresAt: new Date(Date.now() + 30 * 86400000), // 30 days
+    },
+  });
+};
+
+// Revoke all refresh tokens for a user (on logout or password change)
+const revokeAllUserTokens = async (userId: string) => {
+  await prisma.refreshToken.updateMany({
+    where: { userId },
+    data: { revoked: true },
+  });
+};
+
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
@@ -34,9 +54,9 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     throw new Error('Please provide email, password, firstName, and lastName');
   }
 
-  if (password.length < 6) {
+  if (password.length < 10) {
     res.status(400);
-    throw new Error('Password must be at least 6 characters long');
+    throw new Error('Password must be at least 10 characters long');
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -75,6 +95,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   if (user) {
     const token = generateToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
+    await saveRefreshToken(user.id, refreshToken);
 
     res.status(201).json({
       user: {
@@ -120,6 +141,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   if (user && (await bcrypt.compare(password, user.password))) {
     const token = generateToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
+    await saveRefreshToken(user.id, refreshToken);
 
     // Update last login
     await prisma.user.update({
@@ -150,10 +172,13 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
-// @desc    Logout user / clear cookie
+// @desc    Logout user / clear cookie & revoke tokens
 // @route   POST /api/auth/logout
 // @access  Private
 export const logout = asyncHandler(async (req: Request, res: Response) => {
+  if (req.user?.id) {
+    await revokeAllUserTokens(req.user.id);
+  }
   res.cookie('jwt', '', {
     httpOnly: true,
     expires: new Date(0),
@@ -173,26 +198,43 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
   }
 
   try {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { tokenHash },
+    });
+
+    if (!storedToken || storedToken.revoked || new Date() > storedToken.expiresAt) {
+      res.status(401);
+      throw new Error('Refresh token is invalid, revoked, or expired');
+    }
+
     const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET) as { id: string };
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
     });
 
-    if (!user) {
+    if (!user || !user.isActive) {
       res.status(401);
-      throw new Error('User not found');
+      throw new Error('User not active');
     }
+
+    // Revoke used refresh token (rotation)
+    await prisma.refreshToken.update({
+      where: { id: storedToken.id },
+      data: { revoked: true },
+    });
 
     const newToken = generateToken(user.id);
     const newRefreshToken = generateRefreshToken(user.id);
+    await saveRefreshToken(user.id, newRefreshToken);
 
     res.json({
       token: newToken,
       refreshToken: newRefreshToken,
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(401);
-    throw new Error('Invalid token');
+    throw new Error(error.message || 'Invalid refresh token');
   }
 });
 
@@ -297,9 +339,9 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
 export const changePassword = asyncHandler(async (req: Request, res: Response) => {
   const { currentPassword, newPassword } = req.body;
 
-  if (!newPassword || newPassword.length < 8) {
+  if (!newPassword || newPassword.length < 10) {
     res.status(400);
-    throw new Error('New password must be at least 8 characters long');
+    throw new Error('New password must be at least 10 characters long');
   }
 
   const user = await prisma.user.findUnique({
@@ -323,7 +365,10 @@ export const changePassword = asyncHandler(async (req: Request, res: Response) =
       data: { password: hashedPassword },
     });
 
-    res.json({ message: 'Password changed successfully' });
+    // Revoke all existing refresh tokens for security
+    await revokeAllUserTokens(user.id);
+
+    res.json({ message: 'Password changed successfully. All other active sessions revoked.' });
   } else {
     res.status(404);
     throw new Error('User not found');
@@ -341,8 +386,8 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response) =
   });
 
   if (!user) {
-    // Don't reveal that user doesn't exist for security
-    res.status(200).json({ message: 'If the email exists, you will receive a reset link' });
+    // Return generic message to prevent email enumeration
+    res.status(200).json({ message: 'If the account exists, password reset instructions have been dispatched.' });
     return;
   }
 
@@ -362,10 +407,7 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response) =
     },
   });
 
-  // In a real app, send email here
-  console.log(`Password reset token for ${email}: ${resetToken}`);
-
-  res.status(200).json({ message: 'If the email exists, you will receive a reset link' });
+  res.status(200).json({ message: 'If the account exists, password reset instructions have been dispatched.' });
 });
 
 // @desc    Reset password
@@ -375,9 +417,9 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
   const { token } = req.params;
   const { password } = req.body;
 
-  if (!password || password.length < 8) {
+  if (!password || password.length < 10) {
     res.status(400);
-    throw new Error('Password must be at least 8 characters long');
+    throw new Error('Password must be at least 10 characters long');
   }
 
   // Hash token
@@ -398,7 +440,7 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
 
   if (!user) {
     res.status(400);
-    throw new Error('Invalid or expired token');
+    throw new Error('Invalid or expired password reset token');
   }
 
   // Hash new password
@@ -415,5 +457,8 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
     },
   });
 
-  res.json({ message: 'Password reset successful' });
+  // Revoke all existing sessions
+  await revokeAllUserTokens(user.id);
+
+  res.json({ message: 'Password reset successful. All previous sessions revoked.' });
 });

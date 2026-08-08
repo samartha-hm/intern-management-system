@@ -214,8 +214,12 @@ const Dashboard: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <Text type="secondary" style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>Avg Performance</Text>
-                <Title level={2} style={{ margin: '4px 0 0 0', fontWeight: 800 }}>{stats.avgPerformanceScore}%</Title>
-                <Text type="success" style={{ fontSize: 12, fontWeight: 600 }}>Top Tier Rating</Text>
+                <Title level={2} style={{ margin: '4px 0 0 0', fontWeight: 800 }}>
+                  {stats.avgPerformanceScore !== null && stats.avgPerformanceScore !== undefined ? `${stats.avgPerformanceScore}%` : 'N/A'}
+                </Title>
+                <Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>
+                  {stats.avgPerformanceScore !== null ? 'Evaluated Rating' : 'No evaluations yet'}
+                </Text>
               </div>
               <div className="stat-icon-wrapper" style={{ background: '#d1fae5', color: '#059669' }}>
                 <TrophyOutlined />

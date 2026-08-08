@@ -78,70 +78,76 @@ const VALID_ENTITY_TYPES = ['INTERN', 'INTERNSHIP', 'APPLICATION', 'PROJECT', 'U
 // @route   POST /api/documents/upload
 // @access  Private
 export const uploadDocument = asyncHandler(async (req: Request, res: Response) => {
-  // Handle single file upload
-  upload.single('file')(req, res, async (err: any) => {
-    if (err) {
-      res.status(400);
-      throw new Error(err.message);
-    }
-
-    if (!req.file) {
-      res.status(400);
-      throw new Error('No file uploaded');
-    }
-
-    const { entityId, entityType } = req.body;
-
-    // Validate entityType
-    if (!entityType || !VALID_ENTITY_TYPES.includes(entityType)) {
-      res.status(400);
-      throw new Error('Invalid entity type');
-    }
-
-    // Check if entity exists
-    if (!(await entityExists(entityId, entityType))) {
-      fs.unlinkSync(req.file.path);
-      res.status(400);
-      throw new Error('Entity not found');
-    }
-
-    // Check permissions
-    let hasPermission = false;
-
-    if (req.user!.role === 'ADMIN' || req.user!.role === 'HR') {
-      hasPermission = true;
-    } else if (req.user!.role === 'MENTOR') {
-      if (entityType === 'INTERN') {
-        hasPermission = await mentorHasPermission(req.user!.id, entityId);
-      }
-    } else {
-      // Interns can only upload documents for themselves
-      if (entityType === 'INTERN' && entityId === req.user!.id) {
-        hasPermission = true;
-      }
-    }
-
-    if (!hasPermission) {
-      fs.unlinkSync(req.file.path);
-      res.status(403);
-      throw new Error('Not authorized to upload document for this entity');
-    }
-
-    // Create document record
-    const document = await prisma.document.create({
-      data: {
-        entityId,
-        entityType: entityType as any,
-        fileName: req.file.originalname,
-        fileUrl: `/uploads/${req.file.filename}`,
-        fileType: req.file.mimetype,
-        fileSize: req.file.size,
-        uploadedBy: req.user!.id,
-      },
+  // Promise-wrapped multer execution to prevent unhandled callback exceptions
+  try {
+    await new Promise<void>((resolve, reject) => {
+      upload.single('file')(req, res, (err: any) => {
+        if (err) return reject(err);
+        resolve();
+      });
     });
+  } catch (err: any) {
+    res.status(400);
+    throw new Error(err.message || 'File upload failed');
+  }
 
-    res.status(201).json(document);
+  if (!req.file) {
+    res.status(400);
+    throw new Error('No file uploaded');
+  }
+
+  const { entityId, entityType } = req.body;
+
+  // Validate entityType
+  if (!entityType || !VALID_ENTITY_TYPES.includes(entityType)) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(400);
+    throw new Error('Invalid entity type');
+  }
+
+  // Check if entity exists
+  if (!(await entityExists(entityId, entityType))) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(404);
+    throw new Error('Entity not found');
+  }
+
+  // Check permissions
+  let hasPermission = false;
+
+  if (req.user!.role === 'ADMIN' || req.user!.role === 'HR') {
+    hasPermission = true;
+  } else if (req.user!.role === 'MENTOR') {
+    if (entityType === 'INTERN' || entityType === 'USER') {
+      hasPermission = await mentorHasPermission(req.user!.id, entityId);
+    }
+  } else {
+    // Interns can upload documents for themselves
+    if ((entityType === 'INTERN' || entityType === 'USER') && entityId === req.user!.id) {
+      hasPermission = true;
+    }
+  }
+
+  if (!hasPermission) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(403);
+    throw new Error('Not authorized to upload document for this entity');
+  }
+
+  // Create document record
+  const document = await prisma.document.create({
+    data: {
+      entityId,
+      entityType: entityType as any,
+      fileName: req.file.originalname,
+      fileUrl: `/uploads/${req.file.filename}`,
+      fileType: req.file.mimetype,
+      fileSize: req.file.size,
+      uploadedBy: req.user!.id,
+    },
   });
+
+  res.status(201).json(document);
 });
 
 // @desc    Get documents for an entity

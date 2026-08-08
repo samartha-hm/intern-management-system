@@ -225,8 +225,18 @@ const Attendance: React.FC = () => {
       const todayStr = new Date().toISOString().split('T')[0];
       const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+      let nonceToSend: string | undefined = undefined;
+      if (scannedQrContent) {
+        try {
+          const parsed = JSON.parse(scannedQrContent);
+          nonceToSend = parsed.nonce || scannedQrContent;
+        } catch {
+          nonceToSend = scannedQrContent;
+        }
+      }
+
       if (qrActionType === 'CHECK_IN') {
-        await apiService.post('/attendance/check-in', { notes: 'QR Kiosk Check-In' });
+        await apiService.post('/attendance/check-in', { notes: 'QR Kiosk Check-In', nonce: nonceToSend });
         message.success('Entrance Check-In Verified & Saved!');
         setIsCheckedIn(true);
         setTodayRecord({
@@ -239,7 +249,7 @@ const Attendance: React.FC = () => {
           workSummary: 'QR Kiosk Check-In',
         });
       } else {
-        await apiService.post('/attendance/check-out', { notes: todayWorkSummary });
+        await apiService.post('/attendance/check-out', { notes: todayWorkSummary, nonce: nonceToSend });
         if (todayWorkSummary) {
           await apiService.post('/work-diary', {
             tasksDone: todayWorkSummary,
