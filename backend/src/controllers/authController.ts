@@ -6,17 +6,20 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
 
+const JWT_SECRET = process.env.JWT_SECRET || 'experimind_jwt_secret_key_2026_production';
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'experimind_refresh_token_secret_key_2026_production';
+
 // Generate JWT token
 const generateToken = (id: string) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET as string, {
-    expiresIn: (process.env.JWT_EXPIRES_IN || '15m') as any,
+  return jwt.sign({ id }, JWT_SECRET, {
+    expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any,
   });
 };
 
 // Generate refresh token
 const generateRefreshToken = (id: string) => {
-  return jwt.sign({ id }, process.env.REFRESH_TOKEN_SECRET as string, {
-    expiresIn: (process.env.REFRESH_TOKEN_EXPIRES_IN || '7d') as any,
+  return jwt.sign({ id }, REFRESH_TOKEN_SECRET, {
+    expiresIn: (process.env.REFRESH_TOKEN_EXPIRES_IN || '30d') as any,
   });
 };
 
@@ -31,9 +34,9 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     throw new Error('Please provide email, password, firstName, and lastName');
   }
 
-  if (password.length < 8) {
+  if (password.length < 6) {
     res.status(400);
-    throw new Error('Password must be at least 8 characters long');
+    throw new Error('Password must be at least 6 characters long');
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -170,7 +173,7 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET!) as { id: string };
+    const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET) as { id: string };
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
     });

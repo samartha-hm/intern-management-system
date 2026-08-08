@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import asyncHandler from 'express-async-handler';
 import prisma from '../lib/prismaClient';
 
+const JWT_SECRET = process.env.JWT_SECRET || 'experimind_jwt_secret_key_2026_production';
+
 // Protect routes
 export const protect = asyncHandler(async (
   req: Request,
@@ -20,7 +22,7 @@ export const protect = asyncHandler(async (
       token = req.headers.authorization.split(' ')[1];
 
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
+      const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
 
       // Get user from token
       req.user = await prisma.user.findUnique({
