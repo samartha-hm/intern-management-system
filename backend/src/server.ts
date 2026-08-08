@@ -31,6 +31,9 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy for Vercel serverless environment & rate limiters
+app.set('trust proxy', 1);
+
 // Body parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -41,7 +44,7 @@ app.use(cookieParser());
 // Security headers
 app.use(helmet());
 
-// Strict CORS Origin Validation (Exact Match)
+// CORS Origin Validation
 const envOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean);
 const allowedOrigins = [
   ...envOrigins,
@@ -55,10 +58,10 @@ const corsOptions: cors.CorsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.endsWith('.now.sh')) {
       callback(null, true);
     } else {
-      callback(new Error(`CORS Policy Violation: Origin '${origin}' is not authorized`));
+      callback(null, false);
     }
   },
   credentials: true,

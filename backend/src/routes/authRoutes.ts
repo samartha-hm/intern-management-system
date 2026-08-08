@@ -18,10 +18,11 @@ const router = express.Router();
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per IP
+  max: 15, // 15 attempts per IP
   message: { status: 'error', message: 'Too many authentication attempts from this IP. Please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false },
 });
 
 router.post('/register', validateRequest(registerSchema), register);
