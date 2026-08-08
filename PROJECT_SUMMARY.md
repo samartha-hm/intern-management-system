@@ -18,20 +18,22 @@ I've successfully built a comprehensive intern management system for Experimind 
 ### 🎨 Frontend (React/TypeScript)
 - **Modern React 18** with TypeScript
 - **Ant Design 5** professional UI components
+- **Mobile-First Shell** with sticky bottom navigation bar (`< 768px`)
+- **Real Camera QR Decoder** powered by `html5-qrcode`
 - **Redux Toolkit** with persistence for state management
 - **React Query** for efficient data fetching
 - **Protected Routing** based on user roles
-- **Responsive Design** with sidebar navigation
-- **Complete UI** for all system features:
-  - Login/Registration
-  - Dashboard with analytics
-  - Internship & Application management
-  - User management (Admin/HR)
-  - Profile management
-  - Project & task tracking
-  - Performance evaluations
-  - Notifications center
-  - Document management
+- **Responsive Mobile & Desktop Design**
+- **Complete UI Capabilities**:
+  - Login/Registration & Admin credentials
+  - Dashboard with real-time analytics
+  - Internship Cohorts & **Manage Batch Administration Modal** (Roster, Add Intern, Settings)
+  - Interactive **Batch Join Request & Cancellation**
+  - **Workplace QR Camera Scanner** & Dual Kiosk Displays (Entrance & Exit)
+  - Work Diary Submissions with **1-Click Portfolio PDF Export**
+  - Mentor Supervision & **5-Star Work Log Evaluations**
+  - User Directory with Custom Contract Days & User Deletion
+  - Notifications Center & Reports
 
 ### 🐳 DevOps & Infrastructure
 - **Dockerfiles** for both frontend and backend

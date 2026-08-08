@@ -37,23 +37,32 @@ graph TD
 
 ## ✨ Key Features
 
-### 1. 📷 Office QR Attendance Clock & Dual Kiosk Screens
-- **Dedicated Entrance Kiosk (`/qr-kiosk/entrance`)**: Displays a real-time, high-contrast green QR wallpaper for morning check-ins.
-- **Dedicated Exit Kiosk (`/qr-kiosk/exit`)**: Displays a real-time red QR wallpaper for evening check-outs.
-- **Camera Viewfinder Modal**: Interns scan the office screens directly using their web/mobile camera scanner.
-- **Mandatory Work Diary at Checkout**: Check-out is gated by a simple, clean form requiring **"Today's Work Summary"** before the exit timestamp is confirmed.
+### 1. 📷 Real HTML5 Camera Frame QR Decoder & Dual Kiosk Screens
+- **Real QR Camera Scanner**: Integrated `html5-qrcode` library for active camera frame decoding. Timestamp verification is strictly gated on genuine QR code detection.
+- **Dedicated Entrance Kiosk (`/qr-kiosk/entrance`)**: Displays dynamic green QR wallpaper with automatic 30-second token refreshes for morning clock-ins.
+- **Dedicated Exit Kiosk (`/qr-kiosk/exit`)**: Displays dynamic red QR wallpaper with automatic 30-second token refreshes for evening clock-outs.
+- **Mandatory Work Diary at Checkout**: Exit clock-out requires submitting **"Today's Work Summary"** before the timestamp is saved.
 
-### 2. 📊 Personalized Intern Tenure & Program Tracking
-- **Contract Duration Counter**: Tracks assigned start and end dates (e.g. `Jun 1, 2026` to `Aug 31, 2026` = `65 Total Days`).
-- **Tenure Progress Bar**: Displays contract elapsed days vs total program tenure (e.g. `45 of 65 Days Completed (69.2%)`).
-- **Personalized Attendance Rate**: Calculates attendance compliance exclusively against the intern's elapsed program days (e.g. `95.6%`).
+### 2. 📱 Mobile-First Application Shell
+- **Sticky Mobile Bottom Navigation Bar**: Provides intuitive 1-tap navigation on mobile devices (`< 768px`) for **Attendance**, **Work Diary**, **Profile**, **Batches**, and **Supervision**.
+- **Touch-Optimized UX**: Enforces touch tap targets (`44px+`), safe-area notch padding (`env(safe-area-inset-bottom)`), card border radii (`16px`), and mobile drawer controls.
 
-### 3. 👥 Role-Based Access Control (RBAC)
-Customized landing pages and permissions for 4 distinct user roles:
-- **Admin**: Full system management, user provisioning, role configuration, reports, and attendance audit.
-- **HR**: Recruitment, application reviews, intern lifecycle tracking, and compliance metrics.
-- **Mentor**: Supervision of assigned interns, daily work diary approvals, and performance reviews.
-- **Intern**: Daily attendance clock-in/out, work diary log history, and profile management.
+### 3. 🗂️ Internship Cohorts & Batch Management Modal
+- **Manage Internship Program Modal**: 3-tab batch administration modal:
+  - **Enrolled Roster**: View assigned interns with 1-click **"Remove from Batch"** option.
+  - **Add Intern**: Dropdown selector to assign active student interns directly to a cohort.
+  - **Batch Settings**: Configure Program Title, Department, Mentor, and Status (`ACTIVE`, `DRAFT`, `COMPLETED`).
+- **Real Intern Count Tracking**: Backend queries dynamically count approved batch members.
+
+### 4. 🌟 Mentor 5-Star Evaluations & 1-Click Portfolio PDF Export
+- **5-Star Rating System**: Mentors assign 1-5 star ratings alongside feedback notes during daily work log reviews.
+- **Export Portfolio PDF**: 1-click print option for interns to download formatted work history logs for official completion portfolios.
+
+### 5. 👥 Role-Based Access Control (RBAC) & Complete CRUD
+Customized landing pages and permissions for 3 distinct user roles:
+- **Admin**: Full system management, user provisioning, custom contract tenure, batch creation, user deletion, and reports.
+- **Mentor**: Supervision of assigned interns, batch management, work diary 5-star reviews, and attendance tracking.
+- **Intern**: Daily camera QR check-in/out, batch join requests with cancel options, work diary logs, and profile management.
 
 ---
 
