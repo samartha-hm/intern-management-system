@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Button, Tag, Table, Typography, Space, message, Statistic, Progress, Modal, Form, Input, Select, Alert, Tabs } from 'antd';
-import { ClockCircleOutlined, QrcodeOutlined, LogoutOutlined, CheckCircleOutlined, CalendarOutlined, SafetyCertificateOutlined, CameraOutlined, BankOutlined, KeyOutlined, ScanOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Button, Tag, Table, Typography, Space, message, Statistic, Progress, Modal, Form, Input, Select, Alert } from 'antd';
+import { ClockCircleOutlined, QrcodeOutlined, LogoutOutlined, CheckCircleOutlined, CalendarOutlined, SafetyCertificateOutlined, BankOutlined, ScanOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
 
@@ -34,7 +34,6 @@ const Attendance: React.FC = () => {
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
   const [isCheckOutDiaryModalOpen, setIsCheckOutDiaryModalOpen] = useState<boolean>(false);
   const [qrActionType, setQrActionType] = useState<'CHECK_IN' | 'CHECK_OUT'>('CHECK_IN');
-  const [manualQrCode, setManualQrCode] = useState<string>('');
   const [isQrDetected, setIsQrDetected] = useState<boolean>(false);
 
   const [diaryForm] = Form.useForm();
