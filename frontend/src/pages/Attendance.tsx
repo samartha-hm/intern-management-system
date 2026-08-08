@@ -134,7 +134,6 @@ const Attendance: React.FC = () => {
 
   // QR Scanner Real Camera States
   const html5QrCodeRef = React.useRef<Html5Qrcode | null>(null);
-  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [scannedQrContent, setScannedQrContent] = useState<string>('');
 
