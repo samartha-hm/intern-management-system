@@ -4,9 +4,6 @@
  * Provides authenticated HTTP methods with automatic JWT token injection,
  * 401 auto-logout, and consistent error handling.
  */
-import { store } from '../redux/store';
-import { clearCredentials } from '../redux/slices/authSlice';
-
 // Build base URL from environment
 const rawApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 let BASE_URL = rawApiUrl.trim().replace(/\/+$/, '');
@@ -35,11 +32,22 @@ export class ApiError extends Error {
 }
 
 /**
- * Get the current auth token from the Redux store
+ * Get the current auth token directly from localStorage (breaks circular dependency with Redux store)
  */
 function getAuthToken(): string | null {
-  const state = store.getState();
-  return state.auth.token;
+  try {
+    const persisted = localStorage.getItem('persist:root');
+    if (persisted) {
+      const parsed = JSON.parse(persisted);
+      if (parsed.auth) {
+        const authState = JSON.parse(parsed.auth);
+        return authState.token || null;
+      }
+    }
+  } catch {
+    // Fallback
+  }
+  return null;
 }
 
 /**
@@ -67,8 +75,14 @@ function buildHeaders(authenticated: boolean = true, customHeaders?: Record<stri
 async function handleResponse<T>(response: Response): Promise<T> {
   // Auto-logout on 401
   if (response.status === 401) {
-    store.dispatch(clearCredentials());
-    window.location.href = '/login';
+    try {
+      localStorage.removeItem('persist:root');
+    } catch {
+      // Ignore storage errors
+    }
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
     throw new ApiError('Session expired. Please login again.', 401);
   }
 
