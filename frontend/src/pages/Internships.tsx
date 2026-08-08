@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, message, Typography } from 'antd';
-import { PlusOutlined, SearchOutlined, FilterOutlined, CalendarOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, message, Typography, Tabs, List, Avatar, Popconfirm } from 'antd';
+import { PlusOutlined, SearchOutlined, FilterOutlined, CalendarOutlined, UserAddOutlined, DeleteOutlined, SettingOutlined, TeamOutlined } from '@ant-design/icons';
 import apiService from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -16,6 +16,7 @@ interface InternshipItem {
   endDate: string;
   status: 'ACTIVE' | 'DRAFT' | 'COMPLETED' | 'CANCELLED';
   internsCount: number;
+  assignedInterns?: any[];
   maxInterns: number;
 }
 
@@ -27,6 +28,14 @@ const Internships: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
+
+  // Manage Batch Modal State
+  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [selectedManageBatch, setSelectedManageBatch] = useState<any>(null);
+  const [batchInternsList, setBatchInternsList] = useState<any[]>([]);
+  const [availableInternsList, setAvailableInternsList] = useState<any[]>([]);
+  const [selectedAddInternId, setSelectedAddInternId] = useState<string>('');
+  const [manageForm] = Form.useForm();
 
   const fetchInternships = async () => {
     try {
@@ -41,14 +50,25 @@ const Internships: React.FC = () => {
         startDate: item.startDate ? new Date(item.startDate).toISOString().split('T')[0] : '',
         endDate: item.endDate ? new Date(item.endDate).toISOString().split('T')[0] : '',
         status: item.status,
-        internsCount: item.interns ? item.interns.length : 0,
-        maxInterns: item.maxInterns || 5,
+        internsCount: item.assignedInterns ? item.assignedInterns.length : (item.interns ? item.interns.length : 0),
+        assignedInterns: item.assignedInterns || item.interns || [],
+        maxInterns: item.maxInterns || 999,
       }));
       setData(mapped);
     } catch (err: any) {
       message.error(err.message || 'Failed to load internships');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailableInterns = async () => {
+    try {
+      const users = await apiService.get('/users');
+      const internsOnly = users.filter((u: any) => u.role === 'INTERN');
+      setAvailableInternsList(internsOnly);
+    } catch {
+      // Ignore
     }
   };
 
@@ -93,7 +113,64 @@ const Internships: React.FC = () => {
     fetchInternships();
     fetchBatchRequests();
     fetchMentors();
+    fetchAvailableInterns();
   }, []);
+
+  const handleOpenManageModal = (record: InternshipItem) => {
+    setSelectedManageBatch(record);
+    setBatchInternsList(record.assignedInterns || []);
+    manageForm.setFieldsValue({
+      title: record.title,
+      department: record.department,
+      mentorId: record.mentorId,
+      status: record.status,
+    });
+    setIsManageModalOpen(true);
+  };
+
+  const handleUpdateBatchSettings = async (values: any) => {
+    if (!selectedManageBatch) return;
+    try {
+      await apiService.put(`/internships/${selectedManageBatch.id}`, {
+        title: values.title,
+        department: values.department,
+        mentorId: values.mentorId,
+        status: values.status,
+      });
+      message.success('Batch settings updated successfully!');
+      setIsManageModalOpen(false);
+      fetchInternships();
+    } catch (err: any) {
+      message.error(err.message || 'Failed to update batch');
+    }
+  };
+
+  const handleAddInternToBatchSubmit = async () => {
+    if (!selectedManageBatch || !selectedAddInternId) return;
+    try {
+      await apiService.post(`/internships/${selectedManageBatch.id}/assign-intern`, {
+        internId: selectedAddInternId,
+      });
+      message.success('Intern added to batch successfully!');
+      setSelectedAddInternId('');
+      fetchInternships();
+      setIsManageModalOpen(false);
+    } catch (err: any) {
+      message.error(err.message || 'Failed to add intern');
+    }
+  };
+
+  const handleRemoveInternFromBatchSubmit = async (internId: string) => {
+    if (!selectedManageBatch) return;
+    try {
+      await apiService.delete(`/internships/${selectedManageBatch.id}/interns/${internId}`);
+      message.success('Intern removed from batch');
+      setBatchInternsList((prev) => prev.filter((i) => i.id !== internId));
+      fetchInternships();
+    } catch (err: any) {
+      message.error(err.message || 'Failed to remove intern');
+    }
+  };
 
   const handleApproveRequest = async (status: 'APPROVED' | 'REJECTED') => {
     if (!selectedStudent) return;
@@ -200,7 +277,7 @@ const Internships: React.FC = () => {
       key: 'actions',
       render: (_: any, record: InternshipItem) => (
         <Space size="small">
-          <Button size="small" type="link" onClick={() => message.info(`Viewing details for ${record.title}`)}>
+          <Button size="small" type="primary" ghost onClick={() => handleOpenManageModal(record)}>
             Manage
           </Button>
           <Button size="small" type="text" danger onClick={() => handleDelete(record.id)}>
@@ -376,6 +453,146 @@ const Internships: React.FC = () => {
             </Select>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Manage Internship Program Modal */}
+      <Modal
+        title={`Manage Internship Program — ${selectedManageBatch?.title}`}
+        open={isManageModalOpen}
+        onCancel={() => setIsManageModalOpen(false)}
+        footer={null}
+        width={560}
+      >
+        <Tabs
+          defaultActiveKey="roster"
+          items={[
+            {
+              key: 'roster',
+              label: (
+                <span>
+                  <TeamOutlined style={{ marginRight: 6 }} /> Enrolled Interns ({batchInternsList.length})
+                </span>
+              ),
+              children: (
+                <div style={{ padding: '12px 0' }}>
+                  <List
+                    dataSource={batchInternsList}
+                    locale={{ emptyText: 'No interns currently enrolled in this batch' }}
+                    renderItem={(intern: any) => (
+                      <List.Item
+                        actions={[
+                          <Popconfirm
+                            title="Remove from batch?"
+                            onConfirm={() => handleRemoveInternFromBatchSubmit(intern.id)}
+                            okText="Yes"
+                            cancelText="No"
+                          >
+                            <Button size="small" type="link" danger icon={<DeleteOutlined />}>
+                              Remove
+                            </Button>
+                          </Popconfirm>,
+                        ]}
+                      >
+                        <List.Item.Meta
+                          avatar={<Avatar style={{ backgroundColor: '#6366f1', fontWeight: 700 }}>{intern.firstName?.[0] || 'I'}</Avatar>}
+                          title={<Text strong>{intern.firstName} {intern.lastName}</Text>}
+                          description={<Text type="secondary" style={{ fontSize: 12 }}>{intern.email} — {intern.contractDays || 65} Days Contract</Text>}
+                        />
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              ),
+            },
+            {
+              key: 'add',
+              label: (
+                <span>
+                  <UserAddOutlined style={{ marginRight: 6 }} /> Add Intern
+                </span>
+              ),
+              children: (
+                <div style={{ padding: '16px 0' }}>
+                  <Text style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>
+                    Select Student Intern to Assign to this Batch:
+                  </Text>
+                  <Select
+                    placeholder="Select active intern..."
+                    style={{ width: '100%', marginBottom: 16 }}
+                    value={selectedAddInternId}
+                    onChange={setSelectedAddInternId}
+                    allowClear
+                  >
+                    {availableInternsList
+                      .filter((u: any) => u.assignedBatchId !== selectedManageBatch?.id)
+                      .map((u: any) => (
+                        <Select.Option key={u.id} value={u.id}>
+                          {u.firstName} {u.lastName} ({u.email})
+                        </Select.Option>
+                      ))}
+                  </Select>
+                  <Button
+                    type="primary"
+                    block
+                    icon={<UserAddOutlined />}
+                    disabled={!selectedAddInternId}
+                    onClick={handleAddInternToBatchSubmit}
+                    style={{ height: 42, fontWeight: 700 }}
+                  >
+                    Add Selected Intern to Batch
+                  </Button>
+                </div>
+              ),
+            },
+            {
+              key: 'settings',
+              label: (
+                <span>
+                  <SettingOutlined style={{ marginRight: 6 }} /> Edit Settings
+                </span>
+              ),
+              children: (
+                <Form form={manageForm} layout="vertical" onFinish={handleUpdateBatchSettings} style={{ marginTop: 12 }}>
+                  <Form.Item name="title" label="Program Title" rules={[{ required: true }]}>
+                    <Input />
+                  </Form.Item>
+
+                  <Form.Item name="department" label="Department">
+                    <Select allowClear>
+                      <Select.Option value="Engineering">Engineering</Select.Option>
+                      <Select.Option value="Data Science">Data Science</Select.Option>
+                      <Select.Option value="Product UI">Product UI</Select.Option>
+                      <Select.Option value="Marketing">Marketing</Select.Option>
+                      <Select.Option value="DevOps">DevOps</Select.Option>
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item name="mentorId" label="Assigned Mentor">
+                    <Select allowClear>
+                      {mentors.map((m) => (
+                        <Select.Option key={m.id} value={m.id}>
+                          {m.name} ({m.role}) — {m.email}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item name="status" label="Batch Status">
+                    <Select>
+                      <Select.Option value="ACTIVE">ACTIVE</Select.Option>
+                      <Select.Option value="DRAFT">DRAFT</Select.Option>
+                      <Select.Option value="COMPLETED">COMPLETED</Select.Option>
+                    </Select>
+                  </Form.Item>
+
+                  <Button type="primary" htmlType="submit" block style={{ height: 42, fontWeight: 700, marginTop: 8 }}>
+                    Save Batch Settings
+                  </Button>
+                </Form>
+              ),
+            },
+          ]}
+        />
       </Modal>
     </div>
   );

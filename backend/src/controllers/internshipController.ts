@@ -17,6 +17,19 @@ export const getInternships = asyncHandler(async (req: Request, res: Response) =
           email: true,
         },
       },
+      assignedInterns: {
+        where: {
+          batchStatus: 'APPROVED',
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          department: true,
+          contractDays: true,
+        },
+      },
       interns: {
         select: {
           id: true,
@@ -288,5 +301,37 @@ export const removeInternFromInternship = asyncHandler(async (req: Request, res:
     },
   });
 
+  // Also clear assignedBatchId if set
+  await prisma.user.update({
+    where: { id: internId },
+    data: {
+      assignedBatchId: null,
+      batchStatus: 'NONE',
+    },
+  });
+
   res.json({ message: 'Intern removed from internship' });
+});
+
+// @desc    Assign intern to batch (Admin/Mentor)
+// @route   POST /api/internships/:id/assign-intern
+// @access  Private/Admin, Mentor
+export const addInternToBatch = asyncHandler(async (req: Request, res: Response) => {
+  const { internId } = req.body;
+  const batchId = req.params.id;
+
+  if (!internId) {
+    res.status(400);
+    throw new Error('Intern ID is required');
+  }
+
+  const user = await prisma.user.update({
+    where: { id: internId },
+    data: {
+      assignedBatchId: batchId,
+      batchStatus: 'APPROVED',
+    },
+  });
+
+  res.json({ message: 'Intern assigned to batch successfully', user });
 });

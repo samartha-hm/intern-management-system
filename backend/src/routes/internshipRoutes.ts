@@ -8,6 +8,7 @@ import {
   deleteInternship,
   assignInternToInternship,
   removeInternFromInternship,
+  addInternToBatch,
 } from '../controllers/internshipController';
 
 const router = express.Router();
@@ -18,22 +19,26 @@ router.use(protect);
 // Get all internships (accessible to all authenticated users)
 router.route('/')
   .get(getInternships)
-  // Create internship (Admin/HR only)
-  .post(authorize('ADMIN', 'HR'), createInternship);
+  // Create internship (Admin/HR/Mentor)
+  .post(authorize('ADMIN', 'HR', 'MENTOR'), createInternship);
 
 // Get specific internship
 router.route('/:id')
   .get(getInternshipById)
-  // Update internship (Admin/HR only)
-  .put(authorize('ADMIN', 'HR'), updateInternship)
-  // Delete internship (Admin/HR only)
-  .delete(authorize('ADMIN', 'HR'), deleteInternship);
+  // Update internship (Admin/HR/Mentor)
+  .put(authorize('ADMIN', 'HR', 'MENTOR'), updateInternship)
+  // Delete internship (Admin/HR/Mentor)
+  .delete(authorize('ADMIN', 'HR', 'MENTOR'), deleteInternship);
 
-// Assign intern to internship (Admin/HR/Mentor only)
+// Assign intern to internship
 router.route('/:id/interns')
   .post(authorize('ADMIN', 'HR', 'MENTOR'), assignInternToInternship);
 
-// Remove intern from internship (Admin/HR/Mentor only)
+// Assign intern to batch
+router.route('/:id/assign-intern')
+  .post(authorize('ADMIN', 'HR', 'MENTOR'), addInternToBatch);
+
+// Remove intern from internship
 router.route('/:id/interns/:internId')
   .delete(authorize('ADMIN', 'HR', 'MENTOR'), removeInternFromInternship);
 

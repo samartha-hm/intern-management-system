@@ -8,6 +8,7 @@ import {
   deleteUser,
   updateUserPassword,
   requestBatch,
+  cancelBatchRequest,
   getBatchRequests,
   updateBatchStatus,
   updateUserContract,
@@ -20,6 +21,7 @@ router.use(protect);
 
 // Intern batch request
 router.post('/request-batch', requestBatch);
+router.post('/cancel-batch-request', cancelBatchRequest);
 
 // Supervisor / Admin routes (ADMIN, MENTOR)
 router.get('/batch-requests', authorize('ADMIN', 'MENTOR', 'HR'), getBatchRequests);

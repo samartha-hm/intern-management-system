@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, Switch, message, Avatar, Typography } from 'antd';
-import { PlusOutlined, SearchOutlined, UserOutlined, CrownOutlined, TeamOutlined, ReadOutlined, EditOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, Switch, message, Avatar, Typography, Popconfirm } from 'antd';
+import { PlusOutlined, SearchOutlined, UserOutlined, CrownOutlined, TeamOutlined, ReadOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import apiService from '../services/apiService';
 
 const { Title, Text } = Typography;
@@ -143,18 +143,27 @@ const Users: React.FC = () => {
     return matchesSearch && matchesRole;
   });
 
+  const handleDeleteUser = async (id: string) => {
+    try {
+      await apiService.delete(`/users/${id}`);
+      message.success('User deleted successfully.');
+      fetchUsers();
+    } catch (err: any) {
+      message.error(err.message || 'Failed to delete user');
+    }
+  };
+
   const columns = [
     {
-      title: 'User Name',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text: string, record: UserItem) => (
+      title: 'User',
+      key: 'user',
+      render: (_: any, record: UserItem) => (
         <Space>
-          <Avatar style={{ backgroundColor: record.role === 'ADMIN' ? '#ef4444' : record.role === 'MENTOR' ? '#3b82f6' : '#10b981' }}>
-            {text[0]}
+          <Avatar style={{ backgroundColor: record.role === 'ADMIN' ? '#4f46e5' : '#10b981' }}>
+            {record.firstName[0]}
           </Avatar>
           <div>
-            <Text strong style={{ fontSize: 14 }}>{text}</Text>
+            <Text strong style={{ fontSize: 14 }}>{record.name}</Text>
             <div style={{ fontSize: 12, color: '#64748b' }}>{record.email}</div>
           </div>
         </Space>
@@ -165,14 +174,14 @@ const Users: React.FC = () => {
       dataIndex: 'role',
       key: 'role',
       render: (role: string) => {
-        const roleConfig: Record<string, { color: string; icon: any }> = {
-          ADMIN: { color: 'red', icon: <CrownOutlined /> },
-          MENTOR: { color: 'blue', icon: <TeamOutlined /> },
-          INTERN: { color: 'green', icon: <ReadOutlined /> },
+        const roleColors: Record<string, { color: string; icon: React.ReactNode }> = {
+          ADMIN: { color: 'purple', icon: <CrownOutlined /> },
+          MENTOR: { color: 'green', icon: <TeamOutlined /> },
+          INTERN: { color: 'blue', icon: <ReadOutlined /> },
         };
-        const cfg = roleConfig[role] || { color: 'default', icon: <UserOutlined /> };
+        const conf = roleColors[role] || { color: 'default', icon: <UserOutlined /> };
         return (
-          <Tag color={cfg.color} icon={cfg.icon} style={{ fontWeight: 600 }}>
+          <Tag icon={conf.icon} color={conf.color} style={{ fontWeight: 600 }}>
             {role}
           </Tag>
         );
@@ -226,6 +235,17 @@ const Users: React.FC = () => {
           <Button size="small" type="link" icon={<EditOutlined />} onClick={() => handleOpenEditUserModal(record)}>
             Edit
           </Button>
+          <Popconfirm
+            title="Delete user permanently?"
+            description="This action cannot be undone."
+            onConfirm={() => handleDeleteUser(record.id)}
+            okText="Delete"
+            cancelText="Cancel"
+          >
+            <Button size="small" type="text" danger icon={<DeleteOutlined />}>
+              Delete
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },

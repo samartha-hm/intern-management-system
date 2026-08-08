@@ -244,6 +244,23 @@ export const requestBatch = asyncHandler(async (req: Request, res: Response) => 
   res.json({ message: 'Batch join request submitted successfully', user: updatedUser });
 });
 
+// @desc    Cancel intern batch request
+// @route   POST /api/users/cancel-batch-request
+// @access  Private (Intern)
+export const cancelBatchRequest = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.id;
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      assignedBatchId: null,
+      batchStatus: 'NONE',
+    },
+  });
+
+  res.json({ message: 'Batch join request cancelled', user: updatedUser });
+});
+
 // @desc    Get all pending intern batch requests (Admin/Mentor)
 // @route   GET /api/users/batch-requests
 // @access  Private/Admin/Mentor
