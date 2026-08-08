@@ -235,9 +235,70 @@ code {
   }
 }
 
-/* Responsive Grid */
+/* Responsive Mobile App Styling */
 @media (max-width: 768px) {
+  body {
+    padding-bottom: 70px;
+    touch-action: manipulation;
+  }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobile-bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    flex: 1;
+    height: 100%;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-bottom-nav-item.active {
+    color: #6366f1;
+    font-weight: 800;
+  }
+
+  .mobile-bottom-nav-item .anticon {
+    font-size: 20px;
+    margin-bottom: 2px;
+  }
+
+  .ant-layout-sider {
+    display: none !important;
+  }
+
   .ant-layout-content {
-    margin: 16px 12px !important;
+    margin: 12px 8px 76px 8px !important;
+    padding: 12px !important;
+    border-radius: 12px;
+  }
+
+  .ant-card {
+    border-radius: 16px !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .ant-btn {
+    min-height: 44px;
+    border-radius: 10px;
   }
 }

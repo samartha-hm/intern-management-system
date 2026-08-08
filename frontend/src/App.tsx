@@ -236,6 +236,51 @@ const App: React.FC = () => {
           Experimind Labs Intern Management System © {new Date().getFullYear()}
         </Footer>
       </Layout>
+
+      {/* Mobile App Bottom Navigation Bar */}
+      {currentUser && (
+        <nav className="mobile-bottom-nav">
+          {currentUser.role === 'INTERN' ? (
+            <>
+              <Link to="/attendance" className={`mobile-bottom-nav-item ${location.pathname === '/attendance' ? 'active' : ''}`}>
+                <ClockCircleOutlined />
+                <span>Attendance</span>
+              </Link>
+              <Link to="/work-diary" className={`mobile-bottom-nav-item ${location.pathname === '/work-diary' ? 'active' : ''}`}>
+                <BookOutlined />
+                <span>Work Diary</span>
+              </Link>
+              <Link to="/profile" className={`mobile-bottom-nav-item ${location.pathname === '/profile' ? 'active' : ''}`}>
+                <UserOutlined />
+                <span>My Profile</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/dashboard" className={`mobile-bottom-nav-item ${location.pathname === '/dashboard' ? 'active' : ''}`}>
+                <DashboardOutlined />
+                <span>Dashboard</span>
+              </Link>
+              <Link to="/internships" className={`mobile-bottom-nav-item ${location.pathname === '/internships' ? 'active' : ''}`}>
+                <TeamOutlined />
+                <span>Batches</span>
+              </Link>
+              <Link to="/attendance-review" className={`mobile-bottom-nav-item ${location.pathname === '/attendance-review' ? 'active' : ''}`}>
+                <ClockCircleOutlined />
+                <span>Attendance</span>
+              </Link>
+              <Link to="/work-diary-review" className={`mobile-bottom-nav-item ${location.pathname === '/work-diary-review' ? 'active' : ''}`}>
+                <CheckSquareOutlined />
+                <span>Reviews</span>
+              </Link>
+              <Link to="/profile" className={`mobile-bottom-nav-item ${location.pathname === '/profile' ? 'active' : ''}`}>
+                <UserOutlined />
+                <span>Profile</span>
+              </Link>
+            </>
+          )}
+        </nav>
+      )}
     </Layout>
   );
 };

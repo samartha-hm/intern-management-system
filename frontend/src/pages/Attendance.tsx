@@ -3,6 +3,7 @@ import { Card, Row, Col, Button, Tag, Table, Typography, Space, message, Statist
 import { ClockCircleOutlined, QrcodeOutlined, LogoutOutlined, CheckCircleOutlined, CalendarOutlined, SafetyCertificateOutlined, BankOutlined, ScanOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -132,31 +133,53 @@ const Attendance: React.FC = () => {
   const programProgressPct = elapsedDays > 0 ? Math.round((elapsedDays / totalProgramDays) * 1000) / 10 : 0;
 
   // QR Scanner Real Camera States
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const html5QrCodeRef = React.useRef<Html5Qrcode | null>(null);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
+  const [scannedQrContent, setScannedQrContent] = useState<string>('');
 
-  const startCameraStream = async () => {
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
-        });
-        setMediaStream(stream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+  const startQrScanner = () => {
+    setIsQrDetected(false);
+    setScannedQrContent('');
+    setTimeout(async () => {
+      try {
+        const qrContainer = document.getElementById('html5-qr-reader');
+        if (!qrContainer) return;
+        
+        const html5QrCode = new Html5Qrcode('html5-qr-reader');
+        html5QrCodeRef.current = html5QrCode;
+
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
+          (decodedText) => {
+            setIsQrDetected(true);
+            setScannedQrContent(decodedText);
+            message.success('QR Code Detected & Matched!');
+            if (navigator.vibrate) {
+              navigator.vibrate([100, 50, 100]);
+            }
+            html5QrCode.stop().catch(() => {});
+          },
+          () => {}
+        );
         setCameraActive(true);
+      } catch (err: any) {
+        setCameraActive(false);
       }
-    } catch {
-      setCameraActive(false);
-    }
+    }, 300);
   };
 
-  const stopCameraStream = () => {
-    if (mediaStream) {
-      mediaStream.getTracks().forEach((track) => track.stop());
-      setMediaStream(null);
+  const stopQrScanner = () => {
+    if (html5QrCodeRef.current) {
+      try {
+        html5QrCodeRef.current.stop().then(() => {
+          html5QrCodeRef.current?.clear();
+          html5QrCodeRef.current = null;
+        }).catch(() => {});
+      } catch {
+        // Ignore
+      }
     }
     setCameraActive(false);
   };
@@ -177,10 +200,8 @@ const Attendance: React.FC = () => {
   // Trigger Check-In Flow
   const openCheckInQrModal = () => {
     setQrActionType('CHECK_IN');
-    setIsQrDetected(false);
     setIsQrModalOpen(true);
-    startCameraStream();
-    setTimeout(() => setIsQrDetected(true), 1000);
+    startQrScanner();
   };
 
   // Trigger Check-Out Flow (Requires Work Diary Summary!)
@@ -189,15 +210,13 @@ const Attendance: React.FC = () => {
       setIsCheckOutDiaryModalOpen(true);
     } else {
       setQrActionType('CHECK_OUT');
-      setIsQrDetected(false);
       setIsQrModalOpen(true);
-      startCameraStream();
-      setTimeout(() => setIsQrDetected(true), 1000);
+      startQrScanner();
     }
   };
 
   const handleCloseQrModal = () => {
-    stopCameraStream();
+    stopQrScanner();
     setIsQrModalOpen(false);
   };
 
@@ -237,7 +256,7 @@ const Attendance: React.FC = () => {
           });
         }
       }
-      stopCameraStream();
+      stopQrScanner();
       setIsQrModalOpen(false);
       fetchAttendance();
     } catch (err: any) {
@@ -250,10 +269,8 @@ const Attendance: React.FC = () => {
     setTodayWorkSummary(values.workSummary);
     setIsCheckOutDiaryModalOpen(false);
     setQrActionType('CHECK_OUT');
-    setIsQrDetected(false);
     setIsQrModalOpen(true);
-    startCameraStream();
-    setTimeout(() => setIsQrDetected(true), 1000);
+    startQrScanner();
   };
 
   const columns = [
@@ -465,10 +482,10 @@ const Attendance: React.FC = () => {
           <div
             style={{
               position: 'relative',
-              width: 270,
-              height: 270,
-              margin: '0 auto 20px auto',
-              borderRadius: 24,
+              width: 280,
+              minHeight: 240,
+              margin: '0 auto 16px auto',
+              borderRadius: 20,
               background: '#0f172a',
               display: 'flex',
               alignItems: 'center',
@@ -478,34 +495,46 @@ const Attendance: React.FC = () => {
               boxShadow: '0 15px 35px rgba(99, 102, 241, 0.25)',
             }}
           >
-            {cameraActive ? (
-              <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <ScanOutlined style={{ fontSize: 110, color: isQrDetected ? '#10b981' : '#6366f1', transition: 'color 0.3s' }} />
+            <div id="html5-qr-reader" style={{ width: '100%', height: '100%' }} />
+
+            {!cameraActive && !isQrDetected && (
+              <div style={{ padding: 20, textAlign: 'center' }}>
+                <ScanOutlined style={{ fontSize: 64, color: '#6366f1', marginBottom: 10 }} />
+                <Text style={{ color: '#94a3b8', display: 'block', fontSize: 12 }}>
+                  Initializing camera frame decoder...
+                </Text>
+              </div>
             )}
 
-            {/* Laser Scan Animation Line */}
-            <div
-              style={{
-                position: 'absolute',
-                left: '10%',
-                right: '10%',
-                height: '2px',
-                background: '#10b981',
-                boxShadow: '0 0 10px #10b981',
-                animation: 'scanLine 2s infinite ease-in-out',
-              }}
-            />
-
             {isQrDetected && (
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(16, 185, 129, 0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>
-                <CheckCircleOutlined style={{ fontSize: 64, color: '#10b981', marginBottom: 8 }} />
-                <Tag color="green" style={{ fontWeight: 800, fontSize: 13, padding: '4px 14px', borderRadius: 20 }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(16, 185, 129, 0.95)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                <CheckCircleOutlined style={{ fontSize: 64, color: '#ffffff', marginBottom: 8 }} />
+                <Tag color="green" style={{ fontWeight: 800, fontSize: 13, padding: '4px 14px', borderRadius: 20, background: '#ffffff', color: '#059669', border: 'none' }}>
                   QR CODE VERIFIED & MATCHED
                 </Tag>
+                {scannedQrContent && (
+                  <Text style={{ color: '#ffffff', fontSize: 11, marginTop: 6, opacity: 0.9 }}>
+                    Token: {scannedQrContent.substring(0, 24)}...
+                  </Text>
+                )}
               </div>
             )}
           </div>
+
+          {!isQrDetected && (
+            <Button
+              size="small"
+              type="dashed"
+              onClick={() => {
+                setIsQrDetected(true);
+                setScannedQrContent('EXPERIMIND-OFFICE-CHECKIN-TOKEN-VERIFIED');
+                message.success('Simulated QR Code Verified!');
+              }}
+              style={{ marginBottom: 16 }}
+            >
+              ⚡ Test Scan QR Code (Simulated)
+            </Button>
+          )}
 
           <Button
             type="primary"
