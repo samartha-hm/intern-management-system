@@ -27,8 +27,9 @@ const AttendanceReview: React.FC = () => {
   const fetchAttendanceAudit = async () => {
     try {
       setLoading(true);
-      const data = await apiService.get('/attendance');
-      const mapped: AuditRecord[] = data.map((item: any) => ({
+      const res = await apiService.get('/attendance');
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      const mapped: AuditRecord[] = list.map((item: any) => ({
         id: item.id,
         internName: item.user ? `${item.user.firstName} ${item.user.lastName}` : 'Intern',
         department: item.user ? item.user.department || 'Engineering' : 'General',

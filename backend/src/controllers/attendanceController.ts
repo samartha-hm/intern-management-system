@@ -215,7 +215,7 @@ export const getAllAttendance = asyncHandler(async (req: Request, res: Response)
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 50;
   const skip = (page - 1) * limit;
-  const { startDate, endDate, userId, department } = req.query;
+  const { startDate, endDate, userId, department, paginate } = req.query;
 
   const where: any = {};
 
@@ -236,12 +236,18 @@ export const getAllAttendance = asyncHandler(async (req: Request, res: Response)
 
   // Mentor scoping: mentors can only view attendance for their assigned mentees
   if (req.user!.role === 'MENTOR') {
-    where.user = {
-      ...where.user,
-      assignedBatch: {
-        mentorId: req.user!.id,
+    const mentees = await prisma.user.findMany({
+      where: {
+        role: 'INTERN',
+        OR: [
+          { assignedBatch: { mentorId: req.user!.id } },
+          { internships: { some: { mentorId: req.user!.id } } },
+        ],
       },
-    };
+      select: { id: true },
+    });
+    const menteeIds = mentees.map((m) => m.id);
+    where.userId = { in: menteeIds };
   }
 
   const [records, total] = await Promise.all([
@@ -265,15 +271,19 @@ export const getAllAttendance = asyncHandler(async (req: Request, res: Response)
     prisma.attendance.count({ where }),
   ]);
 
-  res.json({
-    data: records,
-    pagination: {
-      total,
-      page,
-      limit,
-      pages: Math.ceil(total / limit),
-    },
-  });
+  if (paginate === 'true') {
+    res.json({
+      data: records,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } else {
+    res.json(records);
+  }
 });
 
 // @desc    Verify/Approve attendance record

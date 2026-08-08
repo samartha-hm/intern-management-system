@@ -22,7 +22,8 @@ const Reports: React.FC = () => {
   const fetchReportData = async () => {
     try {
       setLoading(true);
-      const data = await apiService.get('/attendance');
+      const res = await apiService.get('/attendance');
+      const data = Array.isArray(res) ? res : (res?.data || []);
       
       // Group by user
       const userMap: Record<string, any> = {};

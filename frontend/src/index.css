@@ -235,6 +235,16 @@ code {
   }
 }
 
+/* Responsive Table Horizontal Scroll */
+.ant-table-wrapper {
+  overflow-x: auto;
+}
+
+/* Hide mobile bottom navigation by default on desktop/tablet */
+.mobile-bottom-nav {
+  display: none;
+}
+
 /* Responsive Mobile App Styling */
 @media (max-width: 768px) {
   body {

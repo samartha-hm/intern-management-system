@@ -83,7 +83,7 @@ export const getAllWorkDiaries = asyncHandler(async (req: Request, res: Response
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 50;
   const skip = (page - 1) * limit;
-  const { startDate, endDate, userId, department } = req.query;
+  const { startDate, endDate, userId, department, paginate } = req.query;
 
   const where: any = {};
 
@@ -104,12 +104,18 @@ export const getAllWorkDiaries = asyncHandler(async (req: Request, res: Response
 
   // Mentor scoping: mentors can only view work diaries for their assigned mentees
   if (req.user!.role === 'MENTOR') {
-    where.user = {
-      ...where.user,
-      assignedBatch: {
-        mentorId: req.user!.id,
+    const mentees = await prisma.user.findMany({
+      where: {
+        role: 'INTERN',
+        OR: [
+          { assignedBatch: { mentorId: req.user!.id } },
+          { internships: { some: { mentorId: req.user!.id } } },
+        ],
       },
-    };
+      select: { id: true },
+    });
+    const menteeIds = mentees.map((m) => m.id);
+    where.userId = { in: menteeIds };
   }
 
   const [diaries, total] = await Promise.all([
@@ -133,15 +139,19 @@ export const getAllWorkDiaries = asyncHandler(async (req: Request, res: Response
     prisma.workDiary.count({ where }),
   ]);
 
-  res.json({
-    data: diaries,
-    pagination: {
-      total,
-      page,
-      limit,
-      pages: Math.ceil(total / limit),
-    },
-  });
+  if (paginate === 'true') {
+    res.json({
+      data: diaries,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } else {
+    res.json(diaries);
+  }
 });
 
 // @desc    Review & approve work diary entry
