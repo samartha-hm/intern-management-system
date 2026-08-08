@@ -35,7 +35,6 @@ const Attendance: React.FC = () => {
   const [isCheckOutDiaryModalOpen, setIsCheckOutDiaryModalOpen] = useState<boolean>(false);
   const [qrActionType, setQrActionType] = useState<'CHECK_IN' | 'CHECK_OUT'>('CHECK_IN');
   const [manualQrCode, setManualQrCode] = useState<string>('');
-  const [scannerActive, setScannerActive] = useState<boolean>(false);
   const [isQrDetected, setIsQrDetected] = useState<boolean>(false);
 
   const [diaryForm] = Form.useForm();
@@ -137,7 +136,6 @@ const Attendance: React.FC = () => {
   const openCheckInQrModal = () => {
     setQrActionType('CHECK_IN');
     setIsQrDetected(false);
-    setScannerActive(true);
     setIsQrModalOpen(true);
     setTimeout(() => setIsQrDetected(true), 1200);
   };
