@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
-import apiService, { BASE_URL } from '../../services/apiService';
+import apiService, { BASE_URL, setApiAuthToken } from '../../services/apiService';
 
 // Define types
 export interface User {
@@ -52,6 +52,9 @@ export const login = createAsyncThunk(
       }
 
       const data = await response.json();
+      if (data.token) {
+        setApiAuthToken(data.token);
+      }
       return data;
     } catch (error: any) {
       return rejectWithValue(error.message || 'An error occurred');
@@ -89,6 +92,9 @@ export const register = createAsyncThunk(
       }
 
       const data = await response.json();
+      if (data.token) {
+        setApiAuthToken(data.token);
+      }
       return data;
     } catch (error: any) {
       return rejectWithValue(error.message || 'An error occurred');
@@ -113,6 +119,8 @@ export const logout = createAsyncThunk('auth/logout', async () => {
     await apiService.post('/auth/logout', undefined, true);
   } catch {
     // Logout should always succeed on the client side
+  } finally {
+    setApiAuthToken(null);
   }
 });
 
@@ -129,6 +137,7 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.refreshToken = action.payload.refreshToken;
       state.isAuthenticated = true;
+      setApiAuthToken(action.payload.token);
     },
     clearCredentials: (state) => {
       state.user = null;
@@ -136,6 +145,7 @@ const authSlice = createSlice({
       state.refreshToken = null;
       state.isAuthenticated = false;
       state.error = null;
+      setApiAuthToken(null);
     },
   },
   extraReducers: (builder) => {
@@ -152,6 +162,9 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
         state.isAuthenticated = true;
         state.error = null;
+        if (action.payload.token) {
+          setApiAuthToken(action.payload.token);
+        }
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
@@ -169,6 +182,9 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
         state.isAuthenticated = true;
         state.error = null;
+        if (action.payload.token) {
+          setApiAuthToken(action.payload.token);
+        }
       })
       .addCase(register.rejected, (state, action) => {
         state.isLoading = false;
@@ -185,6 +201,7 @@ const authSlice = createSlice({
         state.token = null;
         state.refreshToken = null;
         state.isAuthenticated = false;
+        setApiAuthToken(null);
       })
       // Logout
       .addCase(logout.fulfilled, (state) => {
@@ -193,6 +210,7 @@ const authSlice = createSlice({
         state.refreshToken = null;
         state.isAuthenticated = false;
         state.error = null;
+        setApiAuthToken(null);
       });
   },
 });

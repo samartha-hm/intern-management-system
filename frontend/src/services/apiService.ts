@@ -31,17 +31,43 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Get the current auth token directly from localStorage (breaks circular dependency with Redux store)
- */
-function getAuthToken(): string | null {
+let inMemoryToken: string | null = null;
+
+export function setApiAuthToken(token: string | null) {
+  inMemoryToken = token;
   try {
+    if (token) {
+      localStorage.setItem('raw_auth_token', token);
+    } else {
+      localStorage.removeItem('raw_auth_token');
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/**
+ * Get the current auth token from in-memory cache, direct storage, or persisted state
+ */
+export function getAuthToken(): string | null {
+  if (inMemoryToken) return inMemoryToken;
+
+  try {
+    const rawToken = localStorage.getItem('raw_auth_token');
+    if (rawToken) {
+      inMemoryToken = rawToken;
+      return rawToken;
+    }
+
     const persisted = localStorage.getItem('persist:root');
     if (persisted) {
       const parsed = JSON.parse(persisted);
       if (parsed.auth) {
         const authState = JSON.parse(parsed.auth);
-        return authState.token || null;
+        if (authState.token) {
+          inMemoryToken = authState.token;
+          return authState.token;
+        }
       }
     }
   } catch {
