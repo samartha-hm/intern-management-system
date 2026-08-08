@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Tag, Typography, Alert, message } from 'antd';
-import { CalendarOutlined } from '@ant-design/icons';
+import { Card, Table, Tag, Typography, Alert, message, Button } from 'antd';
+import { CalendarOutlined, PrinterOutlined } from '@ant-design/icons';
 import apiService from '../services/apiService';
 
 const { Title, Text, Paragraph } = Typography;
@@ -46,6 +46,10 @@ const WorkDiary: React.FC = () => {
     fetchMyDiaries();
   }, []);
 
+  const handlePrintPortfolio = () => {
+    window.print();
+  };
+
   const columns = [
     {
       title: 'Date',
@@ -89,9 +93,14 @@ const WorkDiary: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div>
-        <Title level={2} style={{ margin: 0, fontWeight: 800, color: '#0f172a' }}>Daily Work Diary Log History</Title>
-        <Text type="secondary">Read-only historical view of daily work summaries logged during your evening Check-Outs</Text>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <Title level={2} style={{ margin: 0, fontWeight: 800, color: '#0f172a' }}>Daily Work Diary Log History</Title>
+          <Text type="secondary">Read-only historical view of daily work summaries logged during your evening Check-Outs</Text>
+        </div>
+        <Button icon={<PrinterOutlined />} onClick={handlePrintPortfolio} style={{ height: 40, fontWeight: 700, borderRadius: 8 }}>
+          Export Portfolio PDF
+        </Button>
       </div>
 
       <Alert

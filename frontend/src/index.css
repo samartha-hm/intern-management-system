@@ -219,6 +219,22 @@ code {
   color: #4338ca;
 }
 
+/* Laser Scanning Animation */
+@keyframes scanLine {
+  0% {
+    top: 10%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 85%;
+    opacity: 1;
+  }
+  100% {
+    top: 10%;
+    opacity: 0.8;
+  }
+}
+
 /* Responsive Grid */
 @media (max-width: 768px) {
   .ant-layout-content {

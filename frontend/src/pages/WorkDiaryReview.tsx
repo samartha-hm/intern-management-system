@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Tag, Space, Input, Button, Modal, Typography, Avatar, message, Form } from 'antd';
-import { SearchOutlined, CheckOutlined, MessageOutlined, CheckSquareOutlined } from '@ant-design/icons';
+import { Card, Table, Tag, Space, Input, Button, Modal, Typography, Avatar, message, Form, Rate } from 'antd';
+import { SearchOutlined, CheckOutlined, MessageOutlined, CheckSquareOutlined, StarOutlined } from '@ant-design/icons';
 import apiService from '../services/apiService';
 
 const { Title, Text, Paragraph } = Typography;
@@ -199,7 +199,11 @@ const WorkDiaryReview: React.FC = () => {
               <Text style={{ fontSize: 13 }}>{selectedEntry.tasksDone}</Text>
             </Card>
 
-            <Form form={form} layout="vertical" onFinish={(vals) => handleApproveSingle(selectedEntry.id, vals.feedback)}>
+            <Form form={form} layout="vertical" onFinish={(vals) => handleApproveSingle(selectedEntry.id, vals.rating ? `[⭐ ${vals.rating}/5 Stars] ${vals.feedback || ''}` : vals.feedback)}>
+              <Form.Item name="rating" label={<span style={{ fontWeight: 700 }}>Performance Rating</span>} initialValue={5}>
+                <Rate allowHalf character={<StarOutlined />} style={{ color: '#f59e0b', fontSize: 24 }} />
+              </Form.Item>
+
               <Form.Item name="feedback" label={<span style={{ fontWeight: 700 }}>Mentor Feedback / Notes</span>}>
                 <TextArea rows={3} placeholder="Great job! Keep up the good work..." />
               </Form.Item>
