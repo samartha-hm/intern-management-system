@@ -70,8 +70,20 @@ const Attendance: React.FC = () => {
       setLoading(true);
       const data = await apiService.get('/attendance/my');
       const todayStr = new Date().toISOString().split('T')[0];
-      setRecords(data);
-      const foundToday = data.find((r: AttendanceRecord) => r.date === todayStr);
+
+      const mapped: AttendanceRecord[] = (Array.isArray(data) ? data : []).map((r: any) => ({
+        id: r.id,
+        date: r.date ? new Date(r.date).toISOString().split('T')[0] : (r.checkInTime ? new Date(r.checkInTime).toISOString().split('T')[0] : todayStr),
+        checkIn: r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+        checkOut: r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
+        workHours: r.workHours || null,
+        status: r.status,
+        workSummary: r.notes || '',
+      }));
+
+      setRecords(mapped);
+
+      const foundToday = mapped.find((r: AttendanceRecord) => r.date === todayStr);
 
       if (foundToday) {
         setTodayRecord(foundToday);
@@ -100,10 +112,23 @@ const Attendance: React.FC = () => {
   const hasApprovedBatch = userBatchStatus === 'APPROVED';
 
   const activeBatch = (currentUser as any)?.assignedBatch || (currentUser as any)?.internships?.[0];
-  const programTitle = hasApprovedBatch ? (activeBatch?.title || currentUser?.position || 'Full-Stack Software Engineering Cohort') : 'No Active Cohort Enrolled';
-  const department = hasApprovedBatch ? (activeBatch?.department || currentUser?.department || 'Engineering') : 'Unassigned';
-  const startDateStr = (hasApprovedBatch && activeBatch?.startDate) ? new Date(activeBatch.startDate).toISOString().split('T')[0] : 'Pending Approval';
-  const endDateStr = (hasApprovedBatch && activeBatch?.endDate) ? new Date(activeBatch.endDate).toISOString().split('T')[0] : 'Pending Approval';
+  
+  let programTitle = 'No Active Cohort Enrolled';
+  let department = 'Unassigned';
+  let startDateStr = 'Not Enrolled';
+  let endDateStr = 'Not Enrolled';
+
+  if (hasApprovedBatch) {
+    programTitle = activeBatch?.title || currentUser?.position || 'Internship Program';
+    department = activeBatch?.department || currentUser?.department || 'Engineering';
+    startDateStr = activeBatch?.startDate ? new Date(activeBatch.startDate).toISOString().split('T')[0] : 'Assigned';
+    endDateStr = activeBatch?.endDate ? new Date(activeBatch.endDate).toISOString().split('T')[0] : 'Assigned';
+  } else if (userBatchStatus === 'REQUESTED' || userBatchStatus === 'PENDING') {
+    programTitle = activeBatch ? `${activeBatch.title} (Enrollment Pending)` : 'Batch Request Pending Approval';
+    department = activeBatch?.department || currentUser?.department || 'Engineering';
+    startDateStr = 'Pending Approval';
+    endDateStr = 'Pending Approval';
+  }
 
   const totalProgramDays = (currentUser as any)?.contractDays || 65;
   const presentDays = records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length;

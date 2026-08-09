@@ -141,6 +141,12 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return data as T;
 }
 
+function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 15000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+}
+
 /**
  * API Service — all methods automatically attach JWT token
  */
@@ -149,7 +155,7 @@ const apiService = {
    * GET request
    */
   async get<T = any>(endpoint: string, authenticated: boolean = true): Promise<T> {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
       method: 'GET',
       headers: buildHeaders(authenticated),
     });
@@ -160,7 +166,7 @@ const apiService = {
    * POST request
    */
   async post<T = any>(endpoint: string, body?: any, authenticated: boolean = true): Promise<T> {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: buildHeaders(authenticated),
       body: body ? JSON.stringify(body) : undefined,
@@ -172,7 +178,7 @@ const apiService = {
    * PUT request
    */
   async put<T = any>(endpoint: string, body?: any, authenticated: boolean = true): Promise<T> {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
       method: 'PUT',
       headers: buildHeaders(authenticated),
       body: body ? JSON.stringify(body) : undefined,
@@ -184,7 +190,7 @@ const apiService = {
    * DELETE request
    */
   async delete<T = any>(endpoint: string, authenticated: boolean = true): Promise<T> {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
       method: 'DELETE',
       headers: buildHeaders(authenticated),
     });
@@ -195,7 +201,7 @@ const apiService = {
    * PATCH request
    */
   async patch<T = any>(endpoint: string, body?: any, authenticated: boolean = true): Promise<T> {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
       method: 'PATCH',
       headers: buildHeaders(authenticated),
       body: body ? JSON.stringify(body) : undefined,
