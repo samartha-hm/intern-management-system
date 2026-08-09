@@ -21,8 +21,8 @@ export const validateRequest = (schema: Joi.ObjectSchema) => {
 
 export const registerSchema = Joi.object({
   email: Joi.string().email().required().trim().lowercase(),
-  password: Joi.string().min(10).max(128).required().messages({
-    'string.min': 'Password must be at least 10 characters long for security',
+  password: Joi.string().min(6).max(128).required().messages({
+    'string.min': 'Password must be at least 6 characters long',
   }),
   firstName: Joi.string().max(100).required().trim(),
   lastName: Joi.string().max(100).required().trim(),
@@ -37,7 +37,9 @@ export const loginSchema = Joi.object({
 
 export const createUserSchema = Joi.object({
   email: Joi.string().email().required().trim().lowercase(),
-  password: Joi.string().min(10).max(128).required(),
+  password: Joi.string().min(6).max(128).required().messages({
+    'string.min': 'Password must be at least 6 characters long',
+  }),
   firstName: Joi.string().max(100).required().trim(),
   lastName: Joi.string().max(100).required().trim(),
   role: Joi.string().valid('ADMIN', 'HR', 'MENTOR', 'INTERN').optional(),
