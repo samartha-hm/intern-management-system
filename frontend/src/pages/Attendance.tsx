@@ -161,102 +161,24 @@ const Attendance: React.FC = () => {
   const html5QrCodeRef = React.useRef<Html5Qrcode | null>(null);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [scannedQrContent, setScannedQrContent] = useState<string>('');
-
-  const startQrScanner = () => {
-    setIsQrDetected(false);
-    setScannedQrContent('');
-    setTimeout(async () => {
-      try {
-        const qrContainer = document.getElementById('html5-qr-reader');
-        if (!qrContainer) return;
-        
-        const html5QrCode = new Html5Qrcode('html5-qr-reader');
-        html5QrCodeRef.current = html5QrCode;
-
-        await html5QrCode.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 220, height: 220 } },
-          (decodedText) => {
-            setIsQrDetected(true);
-            setScannedQrContent(decodedText);
-            message.success('QR Code Detected & Matched!');
-            if (navigator.vibrate) {
-              navigator.vibrate([100, 50, 100]);
-            }
-            html5QrCode.stop().catch(() => {});
-          },
-          () => {}
-        );
-        setCameraActive(true);
-      } catch (err: any) {
-        setCameraActive(false);
-      }
-    }, 300);
-  };
-
-  const stopQrScanner = () => {
-    if (html5QrCodeRef.current) {
-      try {
-        html5QrCodeRef.current.stop().then(() => {
-          html5QrCodeRef.current?.clear();
-          html5QrCodeRef.current = null;
-        }).catch(() => {});
-      } catch {
-        // Ignore
-      }
-    }
-    setCameraActive(false);
-  };
-
-  const handleCancelBatchRequestSubmit = async () => {
-    try {
-      setRequestLoading(true);
-      await apiService.post('/users/cancel-batch-request');
-      message.info('Batch join request cancelled.');
-      window.location.reload();
-    } catch (err: any) {
-      message.error(err.message || 'Failed to cancel request');
-    } finally {
-      setRequestLoading(false);
-    }
-  };
-
-  // Trigger Check-In Flow
-  const openCheckInQrModal = () => {
-    setQrActionType('CHECK_IN');
-    setIsQrModalOpen(true);
-    startQrScanner();
-  };
-
-  // Trigger Check-Out Flow (Requires Work Diary Summary!)
-  const handleCheckOutClick = () => {
-    if (!todayWorkSummary) {
-      setIsCheckOutDiaryModalOpen(true);
-    } else {
-      setQrActionType('CHECK_OUT');
-      setIsQrModalOpen(true);
-      startQrScanner();
-    }
-  };
-
-  const handleCloseQrModal = () => {
-    stopQrScanner();
-    setIsQrModalOpen(false);
-  };
+  const [availableCameras, setAvailableCameras] = useState<{ id: string; label: string }[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [scanTab, setScanTab] = useState<'CAMERA' | 'FILE'>('CAMERA');
 
   // Confirm QR Scanning & Update UI Instantly
-  const confirmQrScan = async () => {
+  const confirmQrScan = async (overrideContent?: string) => {
+    const contentToUse = overrideContent || scannedQrContent;
     try {
       const todayStr = new Date().toISOString().split('T')[0];
       const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       let nonceToSend: string | undefined = undefined;
-      if (scannedQrContent) {
+      if (contentToUse) {
         try {
-          const parsed = JSON.parse(scannedQrContent);
-          nonceToSend = parsed.nonce || scannedQrContent;
+          const parsed = JSON.parse(contentToUse);
+          nonceToSend = parsed.nonce || contentToUse;
         } catch {
-          nonceToSend = scannedQrContent;
+          nonceToSend = contentToUse;
         }
       }
 
@@ -279,23 +201,159 @@ const Attendance: React.FC = () => {
           await apiService.post('/work-diary', {
             tasksDone: todayWorkSummary,
             hoursSpent: 8.0,
-          });
+            date: todayStr,
+          }).catch(() => {});
         }
-        message.success('Exit Check-Out Verified & Work Diary Submitted!');
-        if (todayRecord) {
-          setTodayRecord({
-            ...todayRecord,
-            checkOut: nowTimeStr,
-            workSummary: todayWorkSummary,
-          });
-        }
+        message.success('Exit Check-Out Verified & Saved!');
+        setTodayRecord((prev) => (prev ? { ...prev, checkOut: nowTimeStr } : null));
       }
-      stopQrScanner();
-      setIsQrModalOpen(false);
+      handleCloseQrModal();
       fetchAttendance();
     } catch (err: any) {
       message.error(err.message || 'Check-in/out failed');
     }
+  };
+
+  const startQrScanner = async (cameraIdOverride?: string) => {
+    setIsQrDetected(false);
+    setScannedQrContent('');
+    setCameraActive(false);
+
+    setTimeout(async () => {
+      try {
+        const qrContainer = document.getElementById('html5-qr-reader');
+        if (!qrContainer) return;
+
+        if (html5QrCodeRef.current) {
+          try {
+            await html5QrCodeRef.current.stop();
+            html5QrCodeRef.current.clear();
+          } catch {}
+        }
+
+        const html5QrCode = new Html5Qrcode('html5-qr-reader');
+        html5QrCodeRef.current = html5QrCode;
+
+        // Discover available camera devices
+        let cameras: any[] = [];
+        try {
+          cameras = await Html5Qrcode.getCameras();
+          if (cameras && cameras.length > 0) {
+            setAvailableCameras(cameras.map((c: any, index: number) => ({
+              id: c.id,
+              label: c.label || `Camera ${index + 1} (${c.id.substring(0, 4)}...)`,
+            })));
+          }
+        } catch {
+          // Camera listing failed or blocked
+        }
+
+        const targetCameraId = cameraIdOverride || selectedCameraId || (cameras.length > 0 ? cameras[0].id : null);
+        const cameraConfig = targetCameraId
+          ? { deviceId: { exact: targetCameraId } }
+          : { facingMode: 'environment' };
+
+        const onScanSuccess = (decodedText: string) => {
+          setIsQrDetected(true);
+          setScannedQrContent(decodedText);
+          message.success('QR Code Verified & Matched!');
+          if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+          }
+          html5QrCode.stop().catch(() => {});
+          // Auto confirm scan instantly!
+          confirmQrScan(decodedText);
+        };
+
+        try {
+          await html5QrCode.start(
+            cameraConfig,
+            { fps: 15, qrbox: { width: 220, height: 220 } },
+            onScanSuccess,
+            () => {}
+          );
+          setCameraActive(true);
+        } catch {
+          // Fallback to front camera if environment fails
+          await html5QrCode.start(
+            { facingMode: 'user' },
+            { fps: 15, qrbox: { width: 220, height: 220 } },
+            onScanSuccess,
+            () => {}
+          );
+          setCameraActive(true);
+        }
+      } catch (err: any) {
+        setCameraActive(false);
+      }
+    }, 300);
+  };
+
+  const stopQrScanner = () => {
+    if (html5QrCodeRef.current) {
+      try {
+        html5QrCodeRef.current.stop().then(() => {
+          html5QrCodeRef.current?.clear();
+          html5QrCodeRef.current = null;
+        }).catch(() => {});
+      } catch {
+        // Ignore
+      }
+    }
+    setCameraActive(false);
+  };
+
+  const handleQrImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const html5QrCode = new Html5Qrcode('html5-qr-reader-file-temp');
+      const decodedText = await html5QrCode.scanFile(file, true);
+      setIsQrDetected(true);
+      setScannedQrContent(decodedText);
+      message.success('QR Image File Decoded Successfully!');
+      confirmQrScan(decodedText);
+    } catch (err: any) {
+      message.error('Could not detect QR code in uploaded image. Please ensure image is clear.');
+    }
+  };
+
+  const handleCancelBatchRequestSubmit = async () => {
+    try {
+      setRequestLoading(true);
+      await apiService.post('/users/cancel-batch-request');
+      message.info('Batch join request cancelled.');
+      window.location.reload();
+    } catch (err: any) {
+      message.error(err.message || 'Failed to cancel request');
+    } finally {
+      setRequestLoading(false);
+    }
+  };
+
+  // Trigger Check-In Flow
+  const openCheckInQrModal = () => {
+    setQrActionType('CHECK_IN');
+    setIsQrModalOpen(true);
+    setScanTab('CAMERA');
+    startQrScanner();
+  };
+
+  // Trigger Check-Out Flow (Requires Work Diary Summary!)
+  const handleCheckOutClick = () => {
+    if (!todayWorkSummary) {
+      setIsCheckOutDiaryModalOpen(true);
+    } else {
+      setQrActionType('CHECK_OUT');
+      setIsQrModalOpen(true);
+      setScanTab('CAMERA');
+      startQrScanner();
+    }
+  };
+
+  const handleCloseQrModal = () => {
+    stopQrScanner();
+    setIsQrModalOpen(false);
   };
 
   // Submit Work Diary Summary & Proceed to Check-Out
@@ -498,62 +556,122 @@ const Attendance: React.FC = () => {
         <Table columns={columns} dataSource={records} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
       </Card>
 
-      {/* Real HTML5 Browser Camera QR Scanner Modal */}
+      {/* Enhanced Multi-Mode HTML5 Browser Camera & Image QR Scanner Modal */}
       <Modal
-        title={`Workplace Camera Scanner — ${qrActionType === 'CHECK_IN' ? 'Entrance Check-In' : 'Exit Check-Out'}`}
+        title={`Workplace QR Scanner — ${qrActionType === 'CHECK_IN' ? 'Entrance Check-In' : 'Exit Check-Out'}`}
         open={isQrModalOpen}
         onCancel={handleCloseQrModal}
         footer={null}
         centered
-        width={460}
+        width={480}
       >
-        <div style={{ textAlign: 'center', padding: '12px 0' }}>
-          <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
-            Align your camera viewfinder with the Experimind Office {qrActionType === 'CHECK_IN' ? 'Entrance' : 'Exit'} QR Wallpaper Display
-          </Text>
+        <div style={{ textAlign: 'center', padding: '8px 0' }}>
+          {/* Hidden helper for file scanning */}
+          <div id="html5-qr-reader-file-temp" style={{ display: 'none' }} />
 
-          {/* Real Video / Camera Viewfinder Box */}
-          <div
-            style={{
-              position: 'relative',
-              width: 280,
-              minHeight: 240,
-              margin: '0 auto 16px auto',
-              borderRadius: 20,
-              background: '#0f172a',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-              border: '3px solid #6366f1',
-              boxShadow: '0 15px 35px rgba(99, 102, 241, 0.25)',
-            }}
-          >
-            <div id="html5-qr-reader" style={{ width: '100%', height: '100%' }} />
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 16 }}>
+            <Button
+              type={scanTab === 'CAMERA' ? 'primary' : 'default'}
+              size="small"
+              icon={<ScanOutlined />}
+              onClick={() => {
+                setScanTab('CAMERA');
+                startQrScanner();
+              }}
+              style={{ borderRadius: 8, fontWeight: 600 }}
+            >
+              Live Camera
+            </Button>
+            <Button
+              type={scanTab === 'FILE' ? 'primary' : 'default'}
+              size="small"
+              icon={<QrcodeOutlined />}
+              onClick={() => {
+                setScanTab('FILE');
+                stopQrScanner();
+              }}
+              style={{ borderRadius: 8, fontWeight: 600 }}
+            >
+              Upload QR Image
+            </Button>
+          </div>
 
-            {!cameraActive && !isQrDetected && (
-              <div style={{ padding: 20, textAlign: 'center' }}>
-                <ScanOutlined style={{ fontSize: 64, color: '#6366f1', marginBottom: 10 }} />
-                <Text style={{ color: '#94a3b8', display: 'block', fontSize: 12 }}>
-                  Initializing camera frame decoder...
-                </Text>
-              </div>
-            )}
+          {scanTab === 'CAMERA' ? (
+            <>
+              {availableCameras.length > 1 && (
+                <div style={{ marginBottom: 12 }}>
+                  <Text style={{ fontSize: 12, marginRight: 8, color: '#64748b' }}>Switch Camera:</Text>
+                  <Select
+                    size="small"
+                    style={{ width: 220 }}
+                    value={selectedCameraId || (availableCameras[0]?.id || '')}
+                    onChange={(val) => {
+                      setSelectedCameraId(val);
+                      startQrScanner(val);
+                    }}
+                  >
+                    {availableCameras.map((c) => (
+                      <Select.Option key={c.id} value={c.id}>
+                        {c.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </div>
+              )}
 
-            {isQrDetected && (
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(16, 185, 129, 0.95)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-                <CheckCircleOutlined style={{ fontSize: 64, color: '#ffffff', marginBottom: 8 }} />
-                <Tag color="green" style={{ fontWeight: 800, fontSize: 13, padding: '4px 14px', borderRadius: 20, background: '#ffffff', color: '#059669', border: 'none' }}>
-                  QR CODE VERIFIED & MATCHED
-                </Tag>
-                {scannedQrContent && (
-                  <Text style={{ color: '#ffffff', fontSize: 11, marginTop: 6, opacity: 0.9 }}>
-                    Token: {scannedQrContent.substring(0, 24)}...
-                  </Text>
+              {/* Real Video / Camera Viewfinder Box */}
+              <div
+                style={{
+                  position: 'relative',
+                  width: 300,
+                  height: 250,
+                  margin: '0 auto 16px auto',
+                  borderRadius: 20,
+                  background: '#0f172a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  border: '3px solid #6366f1',
+                  boxShadow: '0 15px 35px rgba(99, 102, 241, 0.25)',
+                }}
+              >
+                <div id="html5-qr-reader" style={{ width: '100%', height: '100%' }} />
+
+                {!cameraActive && !isQrDetected && (
+                  <div style={{ padding: 20, textAlign: 'center', position: 'absolute' }}>
+                    <ScanOutlined style={{ fontSize: 54, color: '#6366f1', marginBottom: 10 }} />
+                    <Text style={{ color: '#94a3b8', display: 'block', fontSize: 12 }}>
+                      Initializing camera viewfinder...
+                    </Text>
+                  </div>
+                )}
+
+                {isQrDetected && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(16, 185, 129, 0.95)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                    <CheckCircleOutlined style={{ fontSize: 64, color: '#ffffff', marginBottom: 8 }} />
+                    <Tag color="green" style={{ fontWeight: 800, fontSize: 13, padding: '4px 14px', borderRadius: 20, background: '#ffffff', color: '#059669', border: 'none' }}>
+                      QR VERIFIED — CLOCKING IN...
+                    </Tag>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <div style={{ padding: '24px 16px', background: '#f8fafc', borderRadius: 16, border: '2px dashed #cbd5e1', marginBottom: 16 }}>
+              <QrcodeOutlined style={{ fontSize: 48, color: '#6366f1', marginBottom: 12 }} />
+              <Text strong style={{ display: 'block', marginBottom: 6 }}>Upload QR Wallpaper Screenshot / Image</Text>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 16 }}>
+                Select a saved photo or screenshot of the Office Entrance/Exit QR Screen
+              </Text>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleQrImageUpload}
+                style={{ fontSize: 13, cursor: 'pointer' }}
+              />
+            </div>
+          )}
 
           {!isQrDetected && (
             <Button
@@ -563,10 +681,11 @@ const Attendance: React.FC = () => {
                 setIsQrDetected(true);
                 setScannedQrContent('EXPERIMIND-OFFICE-CHECKIN-TOKEN-VERIFIED');
                 message.success('Simulated QR Code Verified!');
+                confirmQrScan('EXPERIMIND-OFFICE-CHECKIN-TOKEN-VERIFIED');
               }}
               style={{ marginBottom: 16 }}
             >
-              ⚡ Test Scan QR Code (Simulated)
+              ⚡ Test Scan QR Code (Auto-Submit)
             </Button>
           )}
 
@@ -575,11 +694,11 @@ const Attendance: React.FC = () => {
             size="large"
             block
             icon={<SafetyCertificateOutlined />}
-            onClick={confirmQrScan}
+            onClick={() => confirmQrScan()}
             disabled={!isQrDetected}
             style={{ height: 46, fontWeight: 700, borderRadius: 10, background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}
           >
-            Confirm {qrActionType === 'CHECK_IN' ? 'Entrance Check-In' : 'Exit Check-Out'} Timestamp
+            Confirm {qrActionType === 'CHECK_IN' ? 'Entrance Check-In' : 'Exit Check-Out'}
           </Button>
         </div>
       </Modal>
