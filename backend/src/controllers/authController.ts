@@ -62,9 +62,9 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     throw new Error('Please provide email, password, firstName, and lastName');
   }
 
-  if (password.length < 10) {
+  if (password.length < 6) {
     res.status(400);
-    throw new Error('Password must be at least 10 characters long');
+    throw new Error('Password must be at least 6 characters long');
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -389,9 +389,9 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
 export const changePassword = asyncHandler(async (req: Request, res: Response) => {
   const { currentPassword, newPassword } = req.body;
 
-  if (!newPassword || newPassword.length < 10) {
+  if (!newPassword || newPassword.length < 6) {
     res.status(400);
-    throw new Error('New password must be at least 10 characters long');
+    throw new Error('New password must be at least 6 characters long');
   }
 
   const user = await prisma.user.findUnique({
@@ -467,9 +467,9 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
   const { token } = req.params;
   const { password } = req.body;
 
-  if (!password || password.length < 10) {
+  if (!password || password.length < 6) {
     res.status(400);
-    throw new Error('Password must be at least 10 characters long');
+    throw new Error('Password must be at least 6 characters long');
   }
 
   // Hash token
