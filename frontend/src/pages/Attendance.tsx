@@ -193,19 +193,24 @@ const Attendance: React.FC = () => {
           checkOut: null,
           workHours: 8.0,
           status: 'PRESENT',
-          workSummary: 'QR Kiosk Check-In',
+          workSummary: '',
         });
       } else {
-        await apiService.post('/attendance/check-out', { notes: todayWorkSummary, nonce: nonceToSend });
-        if (todayWorkSummary) {
-          await apiService.post('/work-diary', {
-            tasksDone: todayWorkSummary,
-            hoursSpent: 8.0,
-            date: todayStr,
-          }).catch(() => {});
+        if (!todayWorkSummary || todayWorkSummary.trim().length === 0) {
+          message.warning('Mandatory Work Diary entry required before checking out.');
+          handleCloseQrModal();
+          setIsCheckOutDiaryModalOpen(true);
+          return;
         }
-        message.success('Exit Check-Out Verified & Saved!');
-        setTodayRecord((prev) => (prev ? { ...prev, checkOut: nowTimeStr } : null));
+        await apiService.post('/attendance/check-out', { notes: todayWorkSummary, nonce: nonceToSend });
+        await apiService.post('/work-diary', {
+          tasksDone: todayWorkSummary,
+          hoursSpent: 8.0,
+          date: todayStr,
+        }).catch(() => {});
+
+        message.success('Exit Check-Out Verified & Work Diary Saved!');
+        setTodayRecord((prev) => (prev ? { ...prev, checkOut: nowTimeStr, workSummary: todayWorkSummary } : null));
       }
       handleCloseQrModal();
       fetchAttendance();
@@ -339,16 +344,9 @@ const Attendance: React.FC = () => {
     startQrScanner();
   };
 
-  // Trigger Check-Out Flow (Requires Work Diary Summary!)
+  // Trigger Check-Out Flow (ALWAYS requires Work Diary entry first!)
   const handleCheckOutClick = () => {
-    if (!todayWorkSummary) {
-      setIsCheckOutDiaryModalOpen(true);
-    } else {
-      setQrActionType('CHECK_OUT');
-      setIsQrModalOpen(true);
-      setScanTab('CAMERA');
-      startQrScanner();
-    }
+    setIsCheckOutDiaryModalOpen(true);
   };
 
   const handleCloseQrModal = () => {
@@ -671,22 +669,6 @@ const Attendance: React.FC = () => {
                 style={{ fontSize: 13, cursor: 'pointer' }}
               />
             </div>
-          )}
-
-          {!isQrDetected && (
-            <Button
-              size="small"
-              type="dashed"
-              onClick={() => {
-                setIsQrDetected(true);
-                setScannedQrContent('EXPERIMIND-OFFICE-CHECKIN-TOKEN-VERIFIED');
-                message.success('Simulated QR Code Verified!');
-                confirmQrScan('EXPERIMIND-OFFICE-CHECKIN-TOKEN-VERIFIED');
-              }}
-              style={{ marginBottom: 16 }}
-            >
-              ⚡ Test Scan QR Code (Auto-Submit)
-            </Button>
           )}
 
           <Button
