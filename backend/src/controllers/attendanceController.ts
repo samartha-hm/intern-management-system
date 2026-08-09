@@ -3,39 +3,54 @@ import asyncHandler from 'express-async-handler';
 import prisma from '../lib/prismaClient';
 import crypto from 'crypto';
 
-// @desc    Generate server-issued QR security nonce for Kiosk displays
+// @desc    Generate server-issued QR security nonce for Kiosk displays (Daily Stable Nonce)
 // @route   GET /api/attendance/qr-nonce
 // @access  Public / Private
 export const generateQrNonce = asyncHandler(async (req: Request, res: Response) => {
   const kindParam = (req.query.kind as string)?.toUpperCase();
   const kind = kindParam === 'EXIT' ? 'EXIT' : 'ENTRANCE';
 
-  const code = `${kind}-${crypto.randomBytes(16).toString('hex')}`;
-  const validUntil = new Date(Date.now() + 45 * 1000); // 45-second validity
+  const todayStr = new Date().toISOString().split('T')[0];
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
 
   try {
-    const nonceRecord = await prisma.qrNonce.create({
-      data: {
-        code,
+    let nonceRecord = await prisma.qrNonce.findFirst({
+      where: {
         kind: kind as any,
-        validUntil,
+        validUntil: { gte: new Date() },
       },
+      orderBy: { createdAt: 'desc' },
     });
+
+    if (!nonceRecord) {
+      const code = `${kind}-${todayStr}-${crypto.randomBytes(6).toString('hex')}`;
+      nonceRecord = await prisma.qrNonce.create({
+        data: {
+          code,
+          kind: kind as any,
+          validUntil: endOfDay,
+        },
+      });
+    }
 
     res.json({
       status: 'success',
       nonce: nonceRecord.code,
       kind: nonceRecord.kind,
       validUntil: nonceRecord.validUntil,
-      refreshInSeconds: 30,
+      validForDate: todayStr,
+      refreshInSeconds: 86400,
     });
   } catch (err) {
+    const fallbackCode = `${kind}-${todayStr}-DAILY-STABLE`;
     res.json({
       status: 'success',
-      nonce: code,
+      nonce: fallbackCode,
       kind,
-      validUntil,
-      refreshInSeconds: 30,
+      validUntil: endOfDay,
+      validForDate: todayStr,
+      refreshInSeconds: 86400,
     });
   }
 });
@@ -47,31 +62,22 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.id;
   const { notes, nonce } = req.body;
 
-  // Verify server-issued QR nonce if passed or in production
+  // Verify server-issued QR nonce if passed
   if (nonce) {
     try {
       const nonceRecord = await prisma.qrNonce.findUnique({ where: { code: nonce } });
       if (nonceRecord) {
-        if (nonceRecord.isUsed) {
-          res.status(400);
-          throw new Error('QR security nonce has already been used');
-        }
         if (new Date() > nonceRecord.validUntil) {
           res.status(400);
-          throw new Error('QR security nonce has expired. Please rescan kiosk screen.');
+          throw new Error('QR wallpaper has expired for today. Please rescan today\'s kiosk display.');
         }
         if (nonceRecord.kind !== 'ENTRANCE') {
           res.status(400);
-          throw new Error('QR security nonce is not valid for entrance check-in');
+          throw new Error('QR security code is not valid for entrance check-in');
         }
-        await prisma.qrNonce.update({
-          where: { id: nonceRecord.id },
-          data: { isUsed: true },
-        });
       }
     } catch (e: any) {
-      if (e.message?.includes('QR security nonce') || e.message?.includes('expired')) throw e;
-      // Skip optional check if table not yet migrated
+      if (e.message?.includes('QR wallpaper') || e.message?.includes('expired') || e.message?.includes('entrance')) throw e;
     }
   }
 
@@ -124,26 +130,17 @@ export const checkOut = asyncHandler(async (req: Request, res: Response) => {
     try {
       const nonceRecord = await prisma.qrNonce.findUnique({ where: { code: nonce } });
       if (nonceRecord) {
-        if (nonceRecord.isUsed) {
-          res.status(400);
-          throw new Error('QR security nonce has already been used');
-        }
         if (new Date() > nonceRecord.validUntil) {
           res.status(400);
-          throw new Error('QR security nonce has expired. Please rescan kiosk screen.');
+          throw new Error('QR wallpaper has expired for today. Please rescan today\'s kiosk display.');
         }
         if (nonceRecord.kind !== 'EXIT') {
           res.status(400);
-          throw new Error('QR security nonce is not valid for exit check-out');
+          throw new Error('QR security code is not valid for exit check-out');
         }
-        await prisma.qrNonce.update({
-          where: { id: nonceRecord.id },
-          data: { isUsed: true },
-        });
       }
     } catch (e: any) {
-      if (e.message?.includes('QR security nonce') || e.message?.includes('expired')) throw e;
-      // Skip optional check if table not yet migrated
+      if (e.message?.includes('QR wallpaper') || e.message?.includes('expired') || e.message?.includes('exit')) throw e;
     }
   }
 

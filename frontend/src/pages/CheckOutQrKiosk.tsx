@@ -9,7 +9,6 @@ const { Title, Text } = Typography;
 const CheckOutQrKiosk: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [refreshCountdown, setRefreshCountdown] = useState(30);
   const [serverNonce, setServerNonce] = useState<string>('');
 
   const fetchServerNonce = async () => {
@@ -25,16 +24,11 @@ const CheckOutQrKiosk: React.FC = () => {
 
   useEffect(() => {
     fetchServerNonce();
-    const nonceInterval = setInterval(fetchServerNonce, 30000);
     const timer = setInterval(() => {
-      const now = new Date();
-      setCurrentTime(now);
-      const remainingSecs = 30 - (Math.floor(now.getTime() / 1000) % 30);
-      setRefreshCountdown(remainingSecs);
+      setCurrentTime(new Date());
     }, 1000);
     return () => {
       clearInterval(timer);
-      clearInterval(nonceInterval);
     };
   }, []);
 
@@ -54,22 +48,24 @@ const CheckOutQrKiosk: React.FC = () => {
     window.print();
   };
 
+  const todayStr = currentTime.toISOString().split('T')[0];
+
   const checkOutPayload = JSON.stringify({
     type: 'CHECK_OUT',
     office: 'EXPERIMIND_LABS_HQ',
-    nonce: serverNonce || `EXIT-${Date.now()}`,
-    timestamp: currentTime.toISOString(),
+    nonce: serverNonce || `EXIT-${todayStr}-DAILY-STABLE`,
+    date: todayStr,
   });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '82vh', gap: 20, padding: 24 }}>
       <div style={{ textAlign: 'center' }}>
         <Tag color="red" icon={<SafetyCertificateOutlined />} style={{ fontSize: 13, padding: '4px 14px', borderRadius: 20, marginBottom: 8 }}>
-          OFFICIAL WORKPLACE EXIT ATTENDANCE KIOSK
+          OFFICIAL DAILY WORKPLACE EXIT ATTENDANCE KIOSK
         </Tag>
         <Title level={2} style={{ margin: 0, fontWeight: 800, color: '#0f172a' }}>Experimind Labs Exit Display</Title>
         <Text type="secondary" style={{ fontSize: 14 }}>
-          Scan this dynamic Exit QR wallpaper to log your evening check-out and submit your work summary.
+          Scan this stable daily Exit QR wallpaper to log your evening check-out and submit your work summary.
         </Text>
       </div>
 
@@ -94,12 +90,10 @@ const CheckOutQrKiosk: React.FC = () => {
             <QRCode value={checkOutPayload} size={280} color="#b91c1c" icon="/favicon.ico" />
           </div>
 
-          <div style={{ width: '80%', marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#dc2626', marginBottom: 4, fontWeight: 600 }}>
-              <span><SyncOutlined spin style={{ marginRight: 4 }} /> Security Token Refresh</span>
-              <span>{refreshCountdown}s</span>
-            </div>
-            <Progress percent={Math.round((refreshCountdown / 30) * 100)} showInfo={false} strokeColor="#dc2626" size="small" />
+          <div style={{ marginBottom: 16 }}>
+            <Tag color="orange" style={{ fontSize: 12, padding: '4px 12px', borderRadius: 12, fontWeight: 600 }}>
+              ✓ Daily Exit Wallpaper Active • Valid until 11:59 PM Tonight ({todayStr})
+            </Tag>
           </div>
         </div>
 
