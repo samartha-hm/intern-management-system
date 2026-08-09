@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Space, Button, Tag, QRCode, Progress } from 'antd';
-import { FullscreenOutlined, SafetyCertificateOutlined, LoginOutlined, PrinterOutlined, SyncOutlined } from '@ant-design/icons';
+import { Card, Typography, Space, Button, Tag, QRCode } from 'antd';
+import { FullscreenOutlined, SafetyCertificateOutlined, LoginOutlined, PrinterOutlined } from '@ant-design/icons';
 
 import apiService from '../services/apiService';
 
