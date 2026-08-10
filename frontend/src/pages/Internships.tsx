@@ -111,11 +111,13 @@ const Internships: React.FC = () => {
 
   useEffect(() => {
     fetchInternships();
-    fetchBatchRequests();
-    fetchMentors();
-    fetchAvailableInterns();
+    if (currentUser?.role !== 'INTERN') {
+      fetchBatchRequests();
+      fetchMentors();
+      fetchAvailableInterns();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentUser]);
 
   const handleOpenManageModal = (record: InternshipItem) => {
     setSelectedManageBatch(record);

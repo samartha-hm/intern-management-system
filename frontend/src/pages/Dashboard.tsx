@@ -32,6 +32,10 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      if (currentUser?.role === 'INTERN') {
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         const data = await apiService.get('/dashboard/stats');
@@ -67,7 +71,7 @@ const Dashboard: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [currentUser]);
 
   const columns = [
     {
@@ -137,6 +141,71 @@ const Dashboard: React.FC = () => {
 
   const chartDepts = departmentData.length > 0 ? departmentData : DEFAULT_DEPT;
   const chartStatuses = applicationStatusData.length > 0 ? applicationStatusData : DEFAULT_STATUS;
+
+  if (currentUser?.role === 'INTERN') {
+    const isApproved = (currentUser as any)?.batchStatus === 'APPROVED';
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div>
+          <Title level={2} style={{ margin: 0, fontWeight: 800, color: '#0f172a' }}>
+            Welcome back, {currentUser?.firstName || 'Intern'} 👋
+          </Title>
+          <Text type="secondary" style={{ fontSize: 14 }}>
+            Experimind Labs Intern Management Workspace
+          </Text>
+        </div>
+
+        {!isApproved ? (
+          <Card styles={{ body: { padding: 24 } }} style={{ borderRadius: 16, border: '1px solid #ffe58f', background: '#fffbe6' }}>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 32 }}>⌛</div>
+              <div style={{ flex: 1 }}>
+                <Title level={4} style={{ margin: 0, color: '#d97706', fontWeight: 800 }}>
+                  Enrollment Pending Supervisor Approval
+                </Title>
+                <Text style={{ fontSize: 14, color: '#78350f', display: 'block', marginTop: 8, lineHeight: 1.6 }}>
+                  Your internship cohort request is currently awaiting supervisor/mentor approval. Once approved, your QR attendance clock, work diary logs, and internship duration progress will unlock automatically.
+                </Text>
+                <div style={{ marginTop: 16 }}>
+                  <Link to="/attendance">
+                    <Button type="primary" style={{ background: '#d97706', borderColor: '#d97706', fontWeight: 700, borderRadius: 8 }}>
+                      Check Request Status in Attendance
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ) : (
+          <Card styles={{ body: { padding: 24 } }} style={{ borderRadius: 16, border: '1px solid #bbf7d0', background: '#f0fdf4' }}>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 32 }}>🎉</div>
+              <div style={{ flex: 1 }}>
+                <Title level={4} style={{ margin: 0, color: '#15803d', fontWeight: 800 }}>
+                  Active Internship Cohort Approved
+                </Title>
+                <Text style={{ fontSize: 14, color: '#166534', display: 'block', marginTop: 8, lineHeight: 1.6 }}>
+                  Your internship batch has been approved! You can now scan daily office QR wallpapers to log attendance and record your work diaries.
+                </Text>
+                <Space style={{ marginTop: 16 }}>
+                  <Link to="/attendance">
+                    <Button type="primary" style={{ background: '#16a34a', borderColor: '#16a34a', fontWeight: 700, borderRadius: 8 }}>
+                      Go to QR Attendance Clock
+                    </Button>
+                  </Link>
+                  <Link to="/work-diary">
+                    <Button style={{ fontWeight: 700, borderRadius: 8 }}>
+                      View Work Diaries
+                    </Button>
+                  </Link>
+                </Space>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
