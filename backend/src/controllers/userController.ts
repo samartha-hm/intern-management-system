@@ -306,7 +306,7 @@ export const getBatchRequests = asyncHandler(async (req: Request, res: Response)
 // @access  Private/Admin/Mentor
 export const updateBatchStatus = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { status, contractDays } = req.body; // 'APPROVED' or 'REJECTED'
+  const { status, contractDays, batchId, assignedBatchId } = req.body; // 'APPROVED' or 'REJECTED'
 
   const user = await prisma.user.findUnique({
     where: { id },
@@ -317,9 +317,26 @@ export const updateBatchStatus = asyncHandler(async (req: Request, res: Response
     throw new Error('User not found');
   }
 
+  let targetBatchId = batchId || assignedBatchId || user.assignedBatchId;
+
+  // Fallback: If no batch ID is linked yet, pick the latest active internship batch
+  if (!targetBatchId && status === 'APPROVED') {
+    const defaultBatch = await prisma.internship.findFirst({
+      where: { status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (defaultBatch) {
+      targetBatchId = defaultBatch.id;
+    }
+  }
+
   const dataToUpdate: any = {
     batchStatus: status,
   };
+
+  if (targetBatchId && status === 'APPROVED') {
+    dataToUpdate.assignedBatchId = targetBatchId;
+  }
 
   if (contractDays && typeof contractDays === 'number') {
     dataToUpdate.contractDays = contractDays;
@@ -330,9 +347,9 @@ export const updateBatchStatus = asyncHandler(async (req: Request, res: Response
     data: dataToUpdate,
   });
 
-  if (status === 'APPROVED' && updated.assignedBatchId) {
+  if (status === 'APPROVED' && targetBatchId) {
     await prisma.internship.update({
-      where: { id: updated.assignedBatchId },
+      where: { id: targetBatchId },
       data: {
         interns: { connect: { id } },
         assignedInterns: { connect: { id } },

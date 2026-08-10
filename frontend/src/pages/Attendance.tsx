@@ -114,18 +114,18 @@ const Attendance: React.FC = () => {
   }, []);
 
   // Personalized Intern Contract Details configured by Supervisor / Admin
-  const userBatchStatus = (currentUser as any)?.batchStatus || 'NONE';
-  const hasApprovedBatch = userBatchStatus === 'APPROVED';
-
   const activeBatch = (currentUser as any)?.assignedBatch || (currentUser as any)?.internships?.[0];
-  
+  const rawBatchStatus = (currentUser as any)?.batchStatus || 'NONE';
+  const hasApprovedBatch = rawBatchStatus === 'APPROVED' || Boolean((currentUser as any)?.assignedBatchId) || Boolean(activeBatch);
+  const userBatchStatus = hasApprovedBatch ? 'APPROVED' : rawBatchStatus;
+
   let programTitle = 'No Active Cohort Enrolled';
   let department = 'Unassigned';
   let startDateStr = 'Not Enrolled';
   let endDateStr = 'Not Enrolled';
 
   if (hasApprovedBatch) {
-    programTitle = activeBatch?.title || currentUser?.position || 'Internship Program';
+    programTitle = activeBatch?.title || currentUser?.position || 'Software Engineering Internship';
     department = activeBatch?.department || currentUser?.department || 'Engineering';
     startDateStr = activeBatch?.startDate ? new Date(activeBatch.startDate).toISOString().split('T')[0] : 'Assigned';
     endDateStr = activeBatch?.endDate ? new Date(activeBatch.endDate).toISOString().split('T')[0] : 'Assigned';
