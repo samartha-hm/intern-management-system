@@ -116,8 +116,8 @@ const Attendance: React.FC = () => {
   // Personalized Intern Contract Details configured by Supervisor / Admin
   const activeBatch = (currentUser as any)?.assignedBatch || (currentUser as any)?.internships?.[0];
   const rawBatchStatus = (currentUser as any)?.batchStatus || 'NONE';
-  const hasApprovedBatch = rawBatchStatus === 'APPROVED' || Boolean((currentUser as any)?.assignedBatchId) || Boolean(activeBatch);
-  const userBatchStatus = hasApprovedBatch ? 'APPROVED' : rawBatchStatus;
+  const hasApprovedBatch = rawBatchStatus === 'APPROVED';
+  const userBatchStatus = rawBatchStatus;
 
   let programTitle = 'No Active Cohort Enrolled';
   let department = 'Unassigned';
@@ -471,10 +471,11 @@ const Attendance: React.FC = () => {
               <Text style={{ display: 'block', marginBottom: 12, fontWeight: 600 }}>
                 Please select an active Internship Batch / Cohort to request enrollment:
               </Text>
-              <Space style={{ width: '100%', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
                 <Select
                   placeholder="Select an Internship Batch..."
-                  style={{ width: 340 }}
+                  style={{ width: '100%' }}
+                  size="large"
                   value={selectedBatchId}
                   onChange={setSelectedBatchId}
                 >
@@ -486,14 +487,16 @@ const Attendance: React.FC = () => {
                 </Select>
                 <Button
                   type="primary"
+                  size="large"
+                  block
                   icon={<QrcodeOutlined />}
                   onClick={handleRequestBatchSubmit}
                   loading={requestLoading}
-                  style={{ fontWeight: 700 }}
+                  style={{ fontWeight: 700, borderRadius: 8, height: 44 }}
                 >
                   Submit Join Request
                 </Button>
-              </Space>
+              </div>
             </div>
           )}
         </Card>
