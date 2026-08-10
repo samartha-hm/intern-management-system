@@ -181,19 +181,37 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
 // @route   DELETE /api/users/:id
 // @access  Private/Admin
 export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.params.id;
   const user = await prisma.user.findUnique({
-    where: { id: req.params.id },
+    where: { id: userId },
   });
 
-  if (user) {
-    await prisma.user.delete({
-      where: { id: user.id },
-    });
-    res.json({ message: 'User removed' });
-  } else {
+  if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
+
+  // Prevent admin from deleting their own active account
+  if (user.id === req.user?.id) {
+    res.status(400);
+    throw new Error('You cannot delete your own active administrator account.');
+  }
+
+  // Cascade delete dependent child records to prevent foreign key constraint violations
+  await prisma.$transaction([
+    prisma.attendance.deleteMany({ where: { userId } }),
+    prisma.workDiary.deleteMany({ where: { userId } }),
+    prisma.notification.deleteMany({ where: { OR: [{ recipientId: userId }, { senderId: userId }] } }),
+    prisma.task.deleteMany({ where: { assignedTo: userId } }),
+    prisma.project.deleteMany({ where: { internId: userId } }),
+    prisma.evaluation.deleteMany({ where: { OR: [{ internId: userId }, { evaluatorId: userId }] } }),
+    prisma.application.deleteMany({ where: { OR: [{ applicantId: userId }, { reviewerId: userId }] } }),
+    prisma.document.deleteMany({ where: { uploadedBy: userId } }),
+    prisma.refreshToken.deleteMany({ where: { userId } }),
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
+
+  res.json({ message: 'User removed successfully' });
 });
 
 // @desc    Update user password (admin only)
