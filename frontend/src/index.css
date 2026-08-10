@@ -311,4 +311,21 @@ code {
     min-height: 44px;
     border-radius: 10px;
   }
+
+  .ant-typography h2 {
+    font-size: 20px !important;
+  }
+
+  .ant-select {
+    width: 100% !important;
+  }
+
+  .ant-space {
+    width: 100% !important;
+  }
+
+  .ant-modal {
+    max-width: 95vw !important;
+    margin: 10px auto !important;
+  }
 }

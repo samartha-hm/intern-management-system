@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Button, Tag, Table, Typography, Space, message, Statistic, Progress, Modal, Form, Input, Select, Alert } from 'antd';
 import { ClockCircleOutlined, QrcodeOutlined, LogoutOutlined, CheckCircleOutlined, CalendarOutlined, SafetyCertificateOutlined, BankOutlined, ScanOutlined } from '@ant-design/icons';
+import { useDispatch } from 'react-redux';
+import { fetchCurrentUser } from '../redux/slices/authSlice';
+import type { AppDispatch } from '../redux/store';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -19,6 +22,7 @@ interface AttendanceRecord {
 }
 
 const Attendance: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const { currentUser } = useAuth();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -57,7 +61,7 @@ const Attendance: React.FC = () => {
       setRequestLoading(true);
       await apiService.post('/users/request-batch', { batchId: selectedBatchId });
       message.success('Batch join request submitted to Admin/Supervisor!');
-      window.location.reload();
+      dispatch(fetchCurrentUser());
     } catch (err: any) {
       message.error(err.message || 'Failed to submit batch request');
     } finally {
@@ -68,6 +72,7 @@ const Attendance: React.FC = () => {
   const fetchAttendance = async () => {
     try {
       setLoading(true);
+      dispatch(fetchCurrentUser());
       const data = await apiService.get('/attendance/my');
       const todayStr = new Date().toISOString().split('T')[0];
 
@@ -328,7 +333,7 @@ const Attendance: React.FC = () => {
       setRequestLoading(true);
       await apiService.post('/users/cancel-batch-request');
       message.info('Batch join request cancelled.');
-      window.location.reload();
+      dispatch(fetchCurrentUser());
     } catch (err: any) {
       message.error(err.message || 'Failed to cancel request');
     } finally {

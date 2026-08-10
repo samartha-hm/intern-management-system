@@ -223,6 +223,12 @@ export const requestBatch = asyncHandler(async (req: Request, res: Response) => 
     throw new Error('Batch ID is required');
   }
 
+  const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+  if (currentUser?.batchStatus === 'APPROVED') {
+    res.status(400);
+    throw new Error('You are already enrolled and approved in an active internship batch.');
+  }
+
   const batch = await prisma.internship.findUnique({
     where: { id: batchId },
   });
@@ -323,6 +329,16 @@ export const updateBatchStatus = asyncHandler(async (req: Request, res: Response
     where: { id },
     data: dataToUpdate,
   });
+
+  if (status === 'APPROVED' && updated.assignedBatchId) {
+    await prisma.internship.update({
+      where: { id: updated.assignedBatchId },
+      data: {
+        interns: { connect: { id } },
+        assignedInterns: { connect: { id } },
+      },
+    }).catch(() => {});
+  }
 
   res.json(updated);
 });

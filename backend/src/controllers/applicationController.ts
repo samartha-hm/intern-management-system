@@ -216,6 +216,24 @@ export const updateApplicationStatus = asyncHandler(async (req: Request, res: Re
       },
     });
 
+    if (status === 'ACCEPTED' && application.applicantId) {
+      await prisma.user.update({
+        where: { id: application.applicantId },
+        data: {
+          batchStatus: 'APPROVED',
+          assignedBatchId: application.internshipId,
+        },
+      });
+
+      await prisma.internship.update({
+        where: { id: application.internshipId },
+        data: {
+          interns: { connect: { id: application.applicantId } },
+          assignedInterns: { connect: { id: application.applicantId } },
+        },
+      }).catch(() => {});
+    }
+
     res.json(updatedApplication);
   } else {
     res.status(404);
