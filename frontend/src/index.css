@@ -102,14 +102,21 @@ code {
   font-size: 16px !important;
 }
 
-/* Buttons */
+.ant-btn {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.ant-btn:active {
+  transform: scale(0.97) !important;
+  opacity: 0.85 !important;
+}
+
 .ant-btn-primary {
   background: var(--primary-gradient) !important;
   border: none !important;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
   font-weight: 600 !important;
   border-radius: 8px !important;
-  transition: all 0.2s ease !important;
 }
 
 .ant-btn-primary:hover {
