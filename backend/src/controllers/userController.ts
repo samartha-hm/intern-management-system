@@ -378,13 +378,60 @@ export const updateBatchStatus = asyncHandler(async (req: Request, res: Response
   });
 
   if (status === 'APPROVED' && targetBatchId) {
-    await prisma.internship.update({
-      where: { id: targetBatchId },
-      data: {
-        interns: { connect: { id } },
-        assignedInterns: { connect: { id } },
+    // Check if internship is at capacity before approving
+    const currentInternCount = await prisma.internship.count({
+      where: {
+        id: targetBatchId,
+        interns: {
+          some: {},
+        },
       },
-    }).catch(() => {});
+    });
+
+    const targetInternship = await prisma.internship.findUnique({
+      where: { id: targetBatchId },
+      select: { maxInterns: true },
+    });
+
+    if (targetInternship && currentInternCount >= targetInternship.maxInterns) {
+      res.status(400);
+      throw new Error('Internship is at maximum capacity');
+    }
+
+    // Check if user is already assigned to this internship
+    const alreadyAssigned = await prisma.internship.findFirst({
+      where: {
+        id: targetBatchId,
+        interns: {
+          some: {
+            id,
+          },
+        },
+      },
+    });
+
+    if (!alreadyAssigned) {
+      await prisma.internship.update({
+        where: { id: targetBatchId },
+        data: {
+          interns: { connect: { id } },
+          assignedInterns: { connect: { id } },
+        },
+      });
+    }
+
+    // Update user's department to match the internship department
+    const internshipDept = await prisma.internship.findUnique({
+      where: { id: targetBatchId },
+      select: { department: true },
+    });
+
+    await prisma.user.update({
+      where: { id },
+      data: {
+        department: internshipDept?.department || '',
+      },
+    });
   }
 
   res.json(updated);
@@ -411,7 +458,8 @@ export const updateUserContract = asyncHandler(async (req: Request, res: Respons
   if (contractDays !== undefined) dataToUpdate.contractDays = Number(contractDays);
   if (assignedBatchId !== undefined) {
     dataToUpdate.assignedBatchId = assignedBatchId;
-    dataToUpdate.batchStatus = 'APPROVED';
+    // Note: batchStatus should be updated through the dedicated batch status endpoints
+    // to ensure proper approval workflow is followed
   }
   if (department !== undefined) dataToUpdate.department = department;
   if (position !== undefined) dataToUpdate.position = position;

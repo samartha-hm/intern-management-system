@@ -316,14 +316,6 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 
-  if (user && user.batchStatus !== 'APPROVED' && (user.assignedBatchId || (user.internships && user.internships.length > 0))) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { batchStatus: 'APPROVED' },
-    });
-    user.batchStatus = 'APPROVED';
-  }
-
   res.json(user);
 });
 

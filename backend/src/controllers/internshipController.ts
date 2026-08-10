@@ -228,6 +228,25 @@ export const assignInternToInternship = asyncHandler(async (req: Request, res: R
     throw new Error('Intern not found');
   }
 
+  // Check if intern has been approved for this internship (either through application or batch request)
+  const application = await prisma.application.findFirst({
+    where: {
+      internshipId: internshipId,
+      applicantId: internId,
+      status: 'ACCEPTED',
+    },
+  });
+
+  const isApprovedViaApplication = application !== null;
+
+  // Alternatively, check if user is already approved for this batch via batch request process
+  const isAlreadyApproved = intern.batchStatus === 'APPROVED' && intern.assignedBatchId === internshipId;
+
+  if (!isApprovedViaApplication && !isAlreadyApproved) {
+    res.status(400);
+    throw new Error('Intern must have an approved application or batch request to be assigned to this internship');
+  }
+
   // Check if intern is already assigned to this internship
   const existingAssignment = await prisma.internship.findFirst({
     where: {
@@ -273,7 +292,7 @@ export const assignInternToInternship = asyncHandler(async (req: Request, res: R
     },
   });
 
-  // Automatically approve user batch status & assign cohort on user model
+  // Update user batch status and department (consistent with the approval)
   await prisma.user.update({
     where: { id: internId },
     data: {
@@ -283,7 +302,7 @@ export const assignInternToInternship = asyncHandler(async (req: Request, res: R
     },
   });
 
-  res.json({ message: 'Intern assigned to internship and batch status updated to APPROVED' });
+  res.json({ message: 'Intern assigned to internship successfully' });
 });
 
 // @desc    Remove intern from internship
@@ -339,11 +358,54 @@ export const addInternToBatch = asyncHandler(async (req: Request, res: Response)
     throw new Error('Intern ID is required');
   }
 
+  // Check if intern exists
+  const intern = await prisma.user.findUnique({
+    where: { id: internId },
+  });
+
+  if (!intern) {
+    res.status(400);
+    throw new Error('Intern not found');
+  }
+
+  // Check if internship (batch) exists
+  const internship = await prisma.internship.findUnique({
+    where: { id: batchId },
+  });
+
+  if (!internship) {
+    res.status(400);
+    throw new Error('Internship not found');
+  }
+
+  // Check if intern has been approved for this internship (either through application or batch request)
+  const application = await prisma.application.findFirst({
+    where: {
+      internshipId: batchId,
+      applicantId: internId,
+      status: 'ACCEPTED',
+    },
+  });
+
+  const isApprovedViaApplication = application !== null;
+
+  // Alternatively, check if user is already approved for this batch via batch request process
+  const isAlreadyApproved = intern.batchStatus === 'APPROVED' && intern.assignedBatchId === batchId;
+
+  if (!isApprovedViaApplication && !isAlreadyApproved) {
+    res.status(400);
+    throw new Error('Intern must have an approved application or batch request to be assigned to this internship');
+  }
+
+  // Note: The "already assigned" check is covered by the approval check above
+// If intern is already approved for this batch, they are already assigned
+
   const user = await prisma.user.update({
     where: { id: internId },
     data: {
       assignedBatchId: batchId,
       batchStatus: 'APPROVED',
+      department: internship.department,
     },
   });
 
