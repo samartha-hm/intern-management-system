@@ -24,11 +24,16 @@ const WorkDiary: React.FC = () => {
     try {
       setLoading(true);
       const data = await apiService.get('/work-diary/my');
+      const formatTime = (iso?: string) => {
+        if (!iso) return '--';
+        return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      };
+
       const mapped: ReadOnlyDiaryEntry[] = data.map((d: any) => ({
         id: d.id,
         date: d.date ? new Date(d.date).toISOString().split('T')[0] : '',
-        checkInTime: '09:00 AM',
-        checkOutTime: '05:00 PM',
+        checkInTime: formatTime(d.checkInTime),
+        checkOutTime: formatTime(d.checkOutTime),
         workHours: d.hoursSpent || 8.0,
         workSummary: d.tasksDone,
         status: d.status,

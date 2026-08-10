@@ -62,6 +62,17 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.id;
   const { notes, nonce } = req.body;
 
+  // Verify intern is approved in an active internship batch
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { batchStatus: true },
+  });
+
+  if (currentUser?.batchStatus !== 'APPROVED') {
+    res.status(403);
+    throw new Error('Attendance check-in is locked until your supervisor approves your internship batch enrollment request.');
+  }
+
   // Verify server-issued QR nonce if passed
   if (nonce) {
     try {
@@ -124,6 +135,17 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
 export const checkOut = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.id;
   const { notes, nonce } = req.body;
+
+  // Verify intern is approved in an active internship batch
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { batchStatus: true },
+  });
+
+  if (currentUser?.batchStatus !== 'APPROVED') {
+    res.status(403);
+    throw new Error('Attendance check-out is locked until your supervisor approves your internship batch enrollment request.');
+  }
 
   // Verify server-issued QR nonce if passed
   if (nonce) {

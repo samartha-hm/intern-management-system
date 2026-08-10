@@ -314,6 +314,14 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
           startDate: true,
           endDate: true,
           status: true,
+          mentor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
         },
       },
       isActive: true,

@@ -426,14 +426,31 @@ const Attendance: React.FC = () => {
             <Alert
               type="warning"
               showIcon
-              message={`Enrollment Request Submitted — ${(currentUser as any)?.assignedBatch?.title || 'Internship Cohort'}`}
-              description="Your request to join this internship batch is currently pending approval by your Supervisor or System Admin."
+              message={<span style={{ fontWeight: 800, fontSize: 15 }}>Enrollment Request Submitted — Pending Approval</span>}
+              description={
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div>
+                    Requested Internship Cohort: <strong>{activeBatch?.title || 'Internship Program'}</strong>
+                  </div>
+                  <div>
+                    Department: <Tag color="blue">{activeBatch?.department || currentUser?.department || 'Engineering'}</Tag>
+                  </div>
+                  {activeBatch?.mentor && (
+                    <div>
+                      Assigned Supervisor / Mentor: <strong>{activeBatch.mentor.firstName} {activeBatch.mentor.lastName}</strong> ({activeBatch.mentor.email})
+                    </div>
+                  )}
+                  <div style={{ color: '#d97706', fontSize: 13, marginTop: 4, fontWeight: 600 }}>
+                    ⏳ Your request to join this cohort is currently pending review by your Supervisor or System Admin. Attendance scanning will unlock automatically upon approval.
+                  </div>
+                </div>
+              }
               action={
-                <Button size="small" danger onClick={handleCancelBatchRequestSubmit} loading={requestLoading} style={{ fontWeight: 700 }}>
+                <Button danger onClick={handleCancelBatchRequestSubmit} loading={requestLoading} style={{ fontWeight: 700, marginTop: 6 }}>
                   Cancel Request
                 </Button>
               }
-              style={{ borderRadius: 12 }}
+              style={{ borderRadius: 14 }}
             />
           ) : (
             <div>
@@ -443,7 +460,7 @@ const Attendance: React.FC = () => {
               <Space style={{ width: '100%', flexWrap: 'wrap' }}>
                 <Select
                   placeholder="Select an Internship Batch..."
-                  style={{ width: 320 }}
+                  style={{ width: 340 }}
                   value={selectedBatchId}
                   onChange={setSelectedBatchId}
                 >
@@ -483,13 +500,40 @@ const Attendance: React.FC = () => {
             </Text>
 
             {!isCheckedIn ? (
-              <Button type="primary" size="large" block icon={<QrcodeOutlined />} onClick={openCheckInQrModal} style={{ height: 48, fontSize: 15, fontWeight: 700 }}>
+              <Button
+                type="primary"
+                size="large"
+                block
+                icon={<QrcodeOutlined />}
+                onClick={openCheckInQrModal}
+                disabled={!hasApprovedBatch}
+                style={{ height: 48, fontSize: 15, fontWeight: 700 }}
+              >
                 Scan Entrance QR Code to Clock In
               </Button>
             ) : (
-              <Button danger size="large" block icon={<LogoutOutlined />} onClick={handleCheckOutClick} disabled={Boolean(todayRecord?.checkOut)} style={{ height: 48, fontSize: 15, fontWeight: 700 }}>
+              <Button
+                danger
+                size="large"
+                block
+                icon={<LogoutOutlined />}
+                onClick={handleCheckOutClick}
+                disabled={!hasApprovedBatch || Boolean(todayRecord?.checkOut)}
+                style={{ height: 48, fontSize: 15, fontWeight: 700 }}
+              >
                 {todayRecord?.checkOut ? 'Checked Out for Today' : 'Scan Exit QR Code to Clock Out'}
               </Button>
+            )}
+
+            {!hasApprovedBatch && (
+              <div style={{ marginTop: 16, padding: '12px 14px', background: '#fffbe6', borderRadius: 10, border: '1px solid #ffe58f', textAlign: 'center', fontSize: 13, color: '#d97706', fontWeight: 600 }}>
+                🔒 Attendance Scanning Locked
+                <div style={{ fontSize: 12, fontWeight: 400, color: '#78350f', marginTop: 4 }}>
+                  {userBatchStatus === 'REQUESTED'
+                    ? 'Your batch enrollment request is pending supervisor approval. Attendance QR clocking will unlock automatically once approved.'
+                    : 'Please select an active Internship Batch above and submit a join request to unlock attendance clocking.'}
+                </div>
+              </div>
             )}
 
             {todayRecord?.checkIn && (
@@ -508,10 +552,14 @@ const Attendance: React.FC = () => {
           <Card title="My Internship Program & Tenure Progress" styles={{ body: { padding: 20 } }}>
             {!programDetails.hasApprovedBatch && (
               <Alert
-                type="info"
+                type={userBatchStatus === 'REQUESTED' ? 'warning' : 'info'}
                 showIcon
-                message="Enrollment Pending Supervisor Approval"
-                description="Select an active Internship Batch above and submit a join request to begin your contract tenure tracking."
+                message={userBatchStatus === 'REQUESTED' ? 'Enrollment Pending Supervisor Approval' : 'Cohort Enrollment Required'}
+                description={
+                  userBatchStatus === 'REQUESTED'
+                    ? `You have requested enrollment in "${activeBatch?.title || 'Internship Cohort'}". Your contract tenure tracking will start once approved.`
+                    : 'Select an active Internship Batch above and submit a join request to begin your contract tenure tracking.'
+                }
                 style={{ borderRadius: 10, marginBottom: 16 }}
               />
             )}

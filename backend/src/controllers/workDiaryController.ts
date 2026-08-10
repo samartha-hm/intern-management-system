@@ -73,7 +73,25 @@ export const getMyWorkDiaries = asyncHandler(async (req: Request, res: Response)
     take: limit,
   });
 
-  res.json(diaries);
+  const attendanceRecords = await prisma.attendance.findMany({
+    where: { userId },
+  });
+
+  const enrichedDiaries = diaries.map((d) => {
+    const dDateStr = new Date(d.date).toISOString().split('T')[0];
+    const matchedAtt = attendanceRecords.find((a) => {
+      const aDateStr = new Date(a.date || a.checkInTime).toISOString().split('T')[0];
+      return aDateStr === dDateStr;
+    });
+
+    return {
+      ...d,
+      checkInTime: matchedAtt?.checkInTime ? new Date(matchedAtt.checkInTime).toISOString() : null,
+      checkOutTime: matchedAtt?.checkOutTime ? new Date(matchedAtt.checkOutTime).toISOString() : null,
+    };
+  });
+
+  res.json(enrichedDiaries);
 });
 
 // @desc    Get all work diaries for review (Mentor/HR/Admin)
@@ -139,9 +157,28 @@ export const getAllWorkDiaries = asyncHandler(async (req: Request, res: Response
     prisma.workDiary.count({ where }),
   ]);
 
+  const userIds = Array.from(new Set(diaries.map((d) => d.userId)));
+  const attendanceRecords = await prisma.attendance.findMany({
+    where: { userId: { in: userIds } },
+  });
+
+  const enrichedDiaries = diaries.map((d) => {
+    const dDateStr = new Date(d.date).toISOString().split('T')[0];
+    const matchedAtt = attendanceRecords.find((a) => {
+      const aDateStr = new Date(a.date || a.checkInTime).toISOString().split('T')[0];
+      return a.userId === d.userId && aDateStr === dDateStr;
+    });
+
+    return {
+      ...d,
+      checkInTime: matchedAtt?.checkInTime ? new Date(matchedAtt.checkInTime).toISOString() : null,
+      checkOutTime: matchedAtt?.checkOutTime ? new Date(matchedAtt.checkOutTime).toISOString() : null,
+    };
+  });
+
   if (paginate === 'true') {
     res.json({
-      data: diaries,
+      data: enrichedDiaries,
       pagination: {
         total,
         page,
@@ -150,7 +187,7 @@ export const getAllWorkDiaries = asyncHandler(async (req: Request, res: Response
       },
     });
   } else {
-    res.json(diaries);
+    res.json(enrichedDiaries);
   }
 });
 
