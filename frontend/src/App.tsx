@@ -49,11 +49,13 @@ const App: React.FC = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState<boolean>(false);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
+      setShowInstallBanner(true);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -65,6 +67,7 @@ const App: React.FC = () => {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
+        setShowInstallBanner(false);
       }
     } else {
       Modal.info({
@@ -331,6 +334,61 @@ const App: React.FC = () => {
             </>
           )}
         </nav>
+      )}
+
+      {/* Floating PWA Native Install Banner */}
+      {showInstallBanner && deferredPrompt && (
+        <div style={{
+          position: 'fixed',
+          bottom: 76,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 2000,
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+          color: '#ffffff',
+          padding: '12px 20px',
+          borderRadius: 14,
+          boxShadow: '0 12px 36px rgba(15, 23, 42, 0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          maxWidth: '92vw',
+          border: '1px solid rgba(99, 102, 241, 0.3)',
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            📲 Install Experimind IMS Web App
+          </div>
+          <Button
+            type="primary"
+            size="small"
+            icon={<DownloadOutlined />}
+            onClick={handleInstallAppClick}
+            style={{
+              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+              border: 'none',
+              fontWeight: 700,
+              borderRadius: 8,
+              height: 32,
+              padding: '0 14px',
+            }}
+          >
+            Install
+          </Button>
+          <button
+            onClick={() => setShowInstallBanner(false)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              fontSize: 16,
+              lineHeight: 1,
+              padding: 4,
+            }}
+          >
+            ✕
+          </button>
+        </div>
       )}
     </Layout>
   );
