@@ -16,6 +16,42 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
+  const getRolePosition = (user: any) => {
+    if (user?.position && user.position !== 'Software Intern' && user.position !== 'Software Engineer Intern') {
+      return user.position;
+    }
+    switch (user?.role) {
+      case 'ADMIN':
+        return 'System Administrator';
+      case 'HR':
+        return 'Human Resources Manager';
+      case 'MENTOR':
+        return 'Senior Technical Mentor';
+      case 'INTERN':
+      default:
+        return 'Software Engineering Intern';
+    }
+  };
+
+  const getRoleDepartment = (user: any) => {
+    if (user?.department) return user.department;
+    if (user?.assignedBatch?.department) return user.assignedBatch.department;
+    switch (user?.role) {
+      case 'ADMIN':
+        return 'System Administration';
+      case 'HR':
+        return 'Human Resources';
+      case 'MENTOR':
+        return 'Engineering';
+      case 'INTERN':
+      default:
+        return 'Engineering';
+    }
+  };
+
+  const userPosition = getRolePosition(currentUser);
+  const userDepartment = getRoleDepartment(currentUser);
+
   const handleSave = async (values: any) => {
     try {
       setLoading(true);
@@ -52,7 +88,7 @@ const Profile: React.FC = () => {
               {currentUser?.firstName || 'User'} {currentUser?.lastName || ''}
             </Title>
             <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
-              {currentUser?.email || 'user@experimindlabs.com'}
+              {currentUser?.email || ''}
             </Text>
             <Tag color="purple" style={{ fontSize: 13, padding: '4px 14px', borderRadius: 20, fontWeight: 700 }}>
               {currentUser?.role || 'INTERN'}
@@ -61,11 +97,11 @@ const Profile: React.FC = () => {
             <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 24, paddingTop: 20, textAlign: 'left' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <BankOutlined style={{ color: '#6366f1' }} />
-                <Text style={{ fontSize: 13 }}>Department: <Text strong>{currentUser?.department || 'Engineering'}</Text></Text>
+                <Text style={{ fontSize: 13 }}>Department: <Text strong>{userDepartment}</Text></Text>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <SafetyCertificateOutlined style={{ color: '#10b981' }} />
-                <Text style={{ fontSize: 13 }}>Position: <Text strong>{currentUser?.position || 'Software Intern'}</Text></Text>
+                <Text style={{ fontSize: 13 }}>Position: <Text strong>{userPosition}</Text></Text>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <PhoneOutlined style={{ color: '#3b82f6' }} />
@@ -89,13 +125,13 @@ const Profile: React.FC = () => {
 
             {!isEditing ? (
               <Descriptions bordered column={1} labelStyle={{ fontWeight: 700, width: '35%' }}>
-                <Descriptions.Item label="First Name">{currentUser?.firstName || 'User'}</Descriptions.Item>
+                <Descriptions.Item label="First Name">{currentUser?.firstName || ''}</Descriptions.Item>
                 <Descriptions.Item label="Last Name">{currentUser?.lastName || ''}</Descriptions.Item>
                 <Descriptions.Item label="Email Address">{currentUser?.email || ''}</Descriptions.Item>
                 <Descriptions.Item label="Phone Number">{currentUser?.phone || 'Not provided'}</Descriptions.Item>
                 <Descriptions.Item label="Role">{currentUser?.role || 'INTERN'}</Descriptions.Item>
-                <Descriptions.Item label="Department">{currentUser?.department || 'Engineering'}</Descriptions.Item>
-                <Descriptions.Item label="Position">{currentUser?.position || 'Software Engineering Intern'}</Descriptions.Item>
+                <Descriptions.Item label="Department">{userDepartment}</Descriptions.Item>
+                <Descriptions.Item label="Position">{userPosition}</Descriptions.Item>
               </Descriptions>
             ) : (
               <Form
@@ -107,8 +143,8 @@ const Profile: React.FC = () => {
                   lastName: currentUser?.lastName || '',
                   email: currentUser?.email || '',
                   phone: currentUser?.phone || '',
-                  department: currentUser?.department || 'Engineering',
-                  position: currentUser?.position || 'Software Engineering Intern',
+                  department: userDepartment,
+                  position: userPosition,
                 }}
               >
                 <Row gutter={16}>

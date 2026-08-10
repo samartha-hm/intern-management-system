@@ -268,10 +268,23 @@ export const assignInternToInternship = asyncHandler(async (req: Request, res: R
       interns: {
         connect: { id: internId },
       },
+      assignedInterns: {
+        connect: { id: internId },
+      },
     },
   });
 
-  res.json({ message: 'Intern assigned to internship' });
+  // Automatically approve user batch status & assign cohort on user model
+  await prisma.user.update({
+    where: { id: internId },
+    data: {
+      batchStatus: 'APPROVED',
+      assignedBatchId: internshipId,
+      department: internship.department,
+    },
+  });
+
+  res.json({ message: 'Intern assigned to internship and batch status updated to APPROVED' });
 });
 
 // @desc    Remove intern from internship
@@ -298,15 +311,17 @@ export const removeInternFromInternship = asyncHandler(async (req: Request, res:
       interns: {
         disconnect: { id: internId },
       },
+      assignedInterns: {
+        disconnect: { id: internId },
+      },
     },
   });
 
-  // Also clear assignedBatchId if set
   await prisma.user.update({
     where: { id: internId },
     data: {
-      assignedBatchId: null,
       batchStatus: 'NONE',
+      assignedBatchId: null,
     },
   });
 
