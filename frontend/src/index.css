@@ -335,4 +335,17 @@ code {
     max-width: 95vw !important;
     margin: 10px auto !important;
   }
+
+  .ant-card-head-title {
+    white-space: normal !important;
+    word-break: break-word !important;
+    font-size: 14px !important;
+    line-height: 1.3 !important;
+    padding: 10px 0 !important;
+  }
+
+  .ant-card-head {
+    min-height: 44px !important;
+    padding: 0 12px !important;
+  }
 }

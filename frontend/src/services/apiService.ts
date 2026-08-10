@@ -134,7 +134,15 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok) {
-    const errorMessage = (data as ApiErrorResponse)?.message || `Request failed with status ${response.status}`;
+    let errorMessage = (data as ApiErrorResponse)?.message || `Request failed with status ${response.status}`;
+    if (
+      errorMessage.includes('EMAXCONNSESSION') ||
+      errorMessage.includes('max clients reached') ||
+      errorMessage.includes('prisma.') ||
+      errorMessage.includes('invocation:')
+    ) {
+      errorMessage = 'Server database is currently busy. Please try again in a few seconds.';
+    }
     throw new ApiError(errorMessage, response.status);
   }
 

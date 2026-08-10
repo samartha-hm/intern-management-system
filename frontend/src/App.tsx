@@ -208,15 +208,16 @@ const App: React.FC = () => {
         <Menu theme="dark" mode="inline" selectedKeys={[selectedKey]} items={getMenuItems()} />
       </Sider>
       <Layout>
-        <Header style={{ background: '#fff', padding: 0, borderBottom: '1px solid #f0f0f0' }}>
+        <Header style={{ background: '#fff', padding: '0 16px', borderBottom: '1px solid #f0f0f0', height: 'auto', minHeight: 56 }}>
           {currentUser ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '64px', padding: '0 24px' }}>
-              <div>
-                <span className="ant-typography" style={{ fontSize: 15, fontWeight: 500 }}>
-                  Welcome, {currentUser.firstName || ''} {currentUser.lastName || ''} ({currentUser.role})
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: '56px', flexWrap: 'wrap', gap: 8, padding: '6px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', maxWidth: '60%' }}>
+                <span className="ant-typography" style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Welcome, {currentUser.firstName || ''} {currentUser.lastName || ''}
                 </span>
+                <Tag color="indigo" style={{ fontSize: 10, margin: 0, fontWeight: 700 }}>{currentUser.role}</Tag>
               </div>
-              <Space size={16}>
+              <Space size={10} style={{ flexShrink: 0 }}>
                 <Button
                   type="primary"
                   size="small"
@@ -227,6 +228,8 @@ const App: React.FC = () => {
                     background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
                     border: 'none',
                     fontWeight: 700,
+                    fontSize: 12,
+                    height: 28,
                   }}
                 >
                   Install App
@@ -234,13 +237,13 @@ const App: React.FC = () => {
 
                 <Popover content={notificationContent} trigger="click" placement="bottomRight">
                   <Badge count={unreadCount} overflowCount={99}>
-                    <Button type="text" icon={<BellOutlined style={{ fontSize: 18, color: '#475569' }} />} />
+                    <Button type="text" size="small" icon={<BellOutlined style={{ fontSize: 16, color: '#475569' }} />} />
                   </Badge>
                 </Popover>
 
                 <button
                   onClick={handleLogout}
-                  style={{ background: 'none', border: 'none', color: '#1890ff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
+                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
                 >
                   Logout
                 </button>

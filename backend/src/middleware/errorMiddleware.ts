@@ -35,6 +35,20 @@ export const errorHandler = (
     message = 'Invalid data reference or constraint violation.';
   }
 
+  // Handle database connection pool or Prisma connection errors
+  if (
+    err.message?.includes('EMAXCONNSESSION') ||
+    err.message?.includes('max clients reached') ||
+    err.message?.includes('pool_size') ||
+    err.message?.includes('prisma.') ||
+    err.code === 'P1001' ||
+    err.code === 'P1002' ||
+    err.code === 'P1017'
+  ) {
+    statusCode = 503;
+    message = 'Server database is currently busy. Please try again in a few seconds.';
+  }
+
   const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
 
   res.status(statusCode).json({
