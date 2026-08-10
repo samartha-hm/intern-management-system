@@ -69,7 +69,7 @@ const Profile: React.FC = () => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <PhoneOutlined style={{ color: '#3b82f6' }} />
-                <Text style={{ fontSize: 13 }}>Phone: <Text strong>+1 (555) 234-5678</Text></Text>
+                <Text style={{ fontSize: 13 }}>Phone: <Text strong>{currentUser?.phone || 'Not provided'}</Text></Text>
               </div>
             </div>
           </Card>
@@ -89,12 +89,13 @@ const Profile: React.FC = () => {
 
             {!isEditing ? (
               <Descriptions bordered column={1} labelStyle={{ fontWeight: 700, width: '35%' }}>
-                <Descriptions.Item label="First Name">{currentUser?.firstName || 'John'}</Descriptions.Item>
-                <Descriptions.Item label="Last Name">{currentUser?.lastName || 'Doe'}</Descriptions.Item>
-                <Descriptions.Item label="Email Address">{currentUser?.email || 'john@experimindlabs.com'}</Descriptions.Item>
+                <Descriptions.Item label="First Name">{currentUser?.firstName || 'User'}</Descriptions.Item>
+                <Descriptions.Item label="Last Name">{currentUser?.lastName || ''}</Descriptions.Item>
+                <Descriptions.Item label="Email Address">{currentUser?.email || ''}</Descriptions.Item>
+                <Descriptions.Item label="Phone Number">{currentUser?.phone || 'Not provided'}</Descriptions.Item>
                 <Descriptions.Item label="Role">{currentUser?.role || 'INTERN'}</Descriptions.Item>
                 <Descriptions.Item label="Department">{currentUser?.department || 'Engineering'}</Descriptions.Item>
-                <Descriptions.Item label="Position">{currentUser?.position || 'Software Engineer Intern'}</Descriptions.Item>
+                <Descriptions.Item label="Position">{currentUser?.position || 'Software Engineering Intern'}</Descriptions.Item>
               </Descriptions>
             ) : (
               <Form
@@ -102,11 +103,12 @@ const Profile: React.FC = () => {
                 layout="vertical"
                 onFinish={handleSave}
                 initialValues={{
-                  firstName: currentUser?.firstName || 'John',
-                  lastName: currentUser?.lastName || 'Doe',
-                  email: currentUser?.email || 'john@experimindlabs.com',
+                  firstName: currentUser?.firstName || '',
+                  lastName: currentUser?.lastName || '',
+                  email: currentUser?.email || '',
+                  phone: currentUser?.phone || '',
                   department: currentUser?.department || 'Engineering',
-                  position: currentUser?.position || 'Software Engineer Intern',
+                  position: currentUser?.position || 'Software Engineering Intern',
                 }}
               >
                 <Row gutter={16}>
@@ -121,9 +123,18 @@ const Profile: React.FC = () => {
                     </Form.Item>
                   </Col>
                 </Row>
-                <Form.Item name="email" label="Email Address" rules={[{ required: true }, { type: 'email' }]}>
-                  <Input />
-                </Form.Item>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item name="email" label="Email Address" rules={[{ required: true }, { type: 'email' }]}>
+                      <Input />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item name="phone" label="Phone Number">
+                      <Input placeholder="+1 (555) 000-0000" />
+                    </Form.Item>
+                  </Col>
+                </Row>
                 <Row gutter={16}>
                   <Col span={12}>
                     <Form.Item name="department" label="Department">
