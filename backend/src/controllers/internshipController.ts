@@ -126,19 +126,22 @@ export const createInternship = asyncHandler(async (req: Request, res: Response)
     assignedMentorId = req.user!.id;
   }
 
-  const start = startDate ? new Date(startDate) : new Date();
-  const end = endDate ? new Date(endDate) : new Date(Date.now() + 90 * 86400000);
+  const start = startDate ? new Date(startDate) : undefined;
+  const end = endDate ? new Date(endDate) : undefined;
+
+  const dataToCreate: any = {
+    title,
+    description: description || title,
+    department: department || 'General',
+    mentorId: assignedMentorId,
+    maxInterns: maxInterns ? Number(maxInterns) : 999,
+  };
+
+  if (start) dataToCreate.startDate = start;
+  if (end) dataToCreate.endDate = end;
 
   const internship = await prisma.internship.create({
-    data: {
-      title,
-      description: description || title,
-      department: department || 'General',
-      mentorId: assignedMentorId,
-      startDate: start,
-      endDate: end,
-      maxInterns: maxInterns ? Number(maxInterns) : 999,
-    },
+    data: dataToCreate,
   });
 
   res.status(201).json(internship);
@@ -148,32 +151,28 @@ export const createInternship = asyncHandler(async (req: Request, res: Response)
 // @route   PUT /api/internships/:id
 // @access  Private/Admin, HR
 export const updateInternship = asyncHandler(async (req: Request, res: Response) => {
-  const { title, description, department, startDate, endDate, maxInterns, status } = req.body;
+  const { title, description, department, mentorId, startDate, endDate, maxInterns, status } = req.body;
 
   const internship = await prisma.internship.findUnique({
     where: { id: req.params.id },
   });
 
   if (internship) {
-    internship.title = title || internship.title;
-    internship.description = description || internship.description;
-    internship.department = department || internship.department;
-    internship.startDate = startDate ? new Date(startDate) : internship.startDate;
-    internship.endDate = endDate ? new Date(endDate) : internship.endDate;
-    internship.maxInterns = maxInterns !== undefined ? maxInterns : internship.maxInterns;
-    internship.status = status || internship.status;
+    const dataToUpdate: any = {
+      title: title || internship.title,
+      description: description || internship.description,
+      department: department || internship.department,
+      maxInterns: maxInterns !== undefined ? maxInterns : internship.maxInterns,
+      status: status || internship.status,
+    };
+
+    if (mentorId) dataToUpdate.mentorId = mentorId;
+    if (startDate) dataToUpdate.startDate = new Date(startDate);
+    if (endDate) dataToUpdate.endDate = new Date(endDate);
 
     const updatedInternship = await prisma.internship.update({
       where: { id: internship.id },
-      data: {
-        title: internship.title,
-        description: internship.description,
-        department: internship.department,
-        startDate: internship.startDate,
-        endDate: internship.endDate,
-        maxInterns: internship.maxInterns,
-        status: internship.status,
-      },
+      data: dataToUpdate,
     });
 
     res.json(updatedInternship);

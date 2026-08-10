@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, message, Typography, Tabs, List, Avatar, Popconfirm } from 'antd';
+import { Card, Table, Button, Tag, Space, Input, Select, Modal, Form, message, Typography, Tabs, List, Avatar, Popconfirm, Row, Col } from 'antd';
 import { PlusOutlined, SearchOutlined, FilterOutlined, CalendarOutlined, UserAddOutlined, DeleteOutlined, SettingOutlined, TeamOutlined } from '@ant-design/icons';
 import apiService from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
@@ -125,6 +125,8 @@ const Internships: React.FC = () => {
       department: record.department,
       mentorId: record.mentorId,
       status: record.status,
+      startDate: record.startDate,
+      endDate: record.endDate,
     });
     setIsManageModalOpen(true);
   };
@@ -137,6 +139,8 @@ const Internships: React.FC = () => {
         department: values.department,
         mentorId: values.mentorId,
         status: values.status,
+        startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
+        endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
       });
       message.success('Batch settings updated successfully!');
       setIsManageModalOpen(false);
@@ -196,6 +200,8 @@ const Internships: React.FC = () => {
         description: values.title,
         department: values.department || 'General',
         mentorId: values.mentorId || currentUser?.id,
+        startDate: values.startDate ? new Date(values.startDate).toISOString() : undefined,
+        endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
       });
       message.success('Internship program created successfully!');
       setIsModalOpen(false);
@@ -453,6 +459,19 @@ const Internships: React.FC = () => {
               ))}
             </Select>
           </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="startDate" label="Start Date (Set by Mentor)">
+                <Input type="date" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="endDate" label="End Date (Set by Mentor)">
+                <Input type="date" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
 
@@ -585,6 +604,19 @@ const Internships: React.FC = () => {
                       <Select.Option value="COMPLETED">COMPLETED</Select.Option>
                     </Select>
                   </Form.Item>
+
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item name="startDate" label="Start Date (Set by Mentor)">
+                        <Input type="date" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="endDate" label="End Date (Set by Mentor)">
+                        <Input type="date" />
+                      </Form.Item>
+                    </Col>
+                  </Row>
 
                   <Button type="primary" htmlType="submit" block style={{ height: 42, fontWeight: 700, marginTop: 8 }}>
                     Save Batch Settings

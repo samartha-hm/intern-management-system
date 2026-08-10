@@ -122,14 +122,14 @@ const Attendance: React.FC = () => {
 
   let programTitle = 'No Active Cohort Enrolled';
   let department = 'Unassigned';
-  let startDateStr = 'Not Enrolled';
-  let endDateStr = 'Not Enrolled';
+  let startDateStr = 'Not set by mentor';
+  let endDateStr = 'Not set by mentor';
 
   if (hasApprovedBatch) {
     programTitle = activeBatch?.title || currentUser?.position || 'Software Engineering Internship';
     department = activeBatch?.department || currentUser?.department || 'Engineering';
-    startDateStr = activeBatch?.startDate ? new Date(activeBatch.startDate).toISOString().split('T')[0] : 'Assigned';
-    endDateStr = activeBatch?.endDate ? new Date(activeBatch.endDate).toISOString().split('T')[0] : 'Assigned';
+    startDateStr = activeBatch?.startDate ? new Date(activeBatch.startDate).toISOString().split('T')[0] : 'Not set by mentor';
+    endDateStr = activeBatch?.endDate ? new Date(activeBatch.endDate).toISOString().split('T')[0] : 'Not set by mentor';
   } else if (userBatchStatus === 'REQUESTED' || userBatchStatus === 'PENDING') {
     programTitle = activeBatch ? `${activeBatch.title} (Enrollment Pending)` : 'Batch Request Pending Approval';
     department = activeBatch?.department || currentUser?.department || 'Engineering';
@@ -578,7 +578,7 @@ const Attendance: React.FC = () => {
                 <Tag color={programDetails.hasApprovedBatch ? 'purple' : 'default'}>{programDetails.department}</Tag>
               </Space>
               <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                Contract Duration: {programDetails.startDate} to {programDetails.endDate} ({programDetails.totalProgramDays} Days Total)
+                Duration: {programDetails.startDate} to {programDetails.endDate} ({programDetails.totalProgramDays} Days Total)
               </div>
             </div>
 
