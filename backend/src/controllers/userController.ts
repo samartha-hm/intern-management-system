@@ -43,6 +43,18 @@ export const getUserById = asyncHandler(async (req: Request, res: Response) => {
       department: true,
       position: true,
       phone: true,
+      contractDays: true,
+      batchStatus: true,
+      assignedBatchId: true,
+      assignedBatch: {
+        select: {
+          id: true,
+          title: true,
+          department: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
       isActive: true,
       lastLogin: true,
       createdAt: true,

@@ -136,7 +136,16 @@ const Attendance: React.FC = () => {
     endDateStr = 'Pending Approval';
   }
 
-  const totalProgramDays = (currentUser as any)?.contractDays || 65;
+  let totalProgramDays = (currentUser as any)?.contractDays || 65;
+  if (hasApprovedBatch && activeBatch?.startDate && activeBatch?.endDate) {
+    const startMs = new Date(activeBatch.startDate).getTime();
+    const endMs = new Date(activeBatch.endDate).getTime();
+    const diffDays = Math.round((endMs - startMs) / (1000 * 60 * 60 * 24));
+    if (diffDays > 0) {
+      totalProgramDays = diffDays;
+    }
+  }
+
   const presentDays = records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length;
   const totalHoursLogged = Math.round(records.reduce((acc, r) => acc + (r.workHours || 0), 0) * 10) / 10;
 
