@@ -35,12 +35,12 @@ export const errorHandler = (
     message = 'Invalid data reference or constraint violation.';
   }
 
-  // Handle database connection pool or Prisma connection errors
+  // Handle database connection pool errors
   if (
     err.message?.includes('EMAXCONNSESSION') ||
     err.message?.includes('max clients reached') ||
     err.message?.includes('pool_size') ||
-    err.message?.includes('prisma.') ||
+    err.message?.includes('connection pool') ||
     err.code === 'P1001' ||
     err.code === 'P1002' ||
     err.code === 'P1017'

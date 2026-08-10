@@ -140,8 +140,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     if (
       errorMessage.includes('EMAXCONNSESSION') ||
       errorMessage.includes('max clients reached') ||
-      errorMessage.includes('prisma.') ||
-      errorMessage.includes('invocation:')
+      errorMessage.includes('pool_size')
     ) {
       errorMessage = 'Server database is currently busy. Please try again in a few seconds.';
     }
@@ -162,14 +161,26 @@ function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: num
  */
 const apiService = {
   /**
-   * GET request
+   * GET request with automatic retry on 503 server busy
    */
   async get<T = any>(endpoint: string, authenticated: boolean = true): Promise<T> {
-    const response = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
-      method: 'GET',
-      headers: buildHeaders(authenticated),
-    });
-    return handleResponse<T>(response);
+    try {
+      const response = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
+        method: 'GET',
+        headers: buildHeaders(authenticated),
+      });
+      return await handleResponse<T>(response);
+    } catch (err: any) {
+      if (err?.status === 503) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const retryResponse = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
+          method: 'GET',
+          headers: buildHeaders(authenticated),
+        });
+        return await handleResponse<T>(retryResponse);
+      }
+      throw err;
+    }
   },
 
   /**
