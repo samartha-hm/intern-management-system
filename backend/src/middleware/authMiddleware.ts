@@ -24,20 +24,25 @@ export const protect = asyncHandler(async (
       // Verify token
       const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
 
-      // Get user from token
-      req.user = await prisma.user.findUnique({
-        where: { id: decoded.id },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          role: true,
-          department: true,
-          position: true,
-          isActive: true,
-        },
-      });
+      // Get user from token safely
+      try {
+        req.user = await prisma.user.findUnique({
+          where: { id: decoded.id },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            department: true,
+            position: true,
+            isActive: true,
+          },
+        });
+      } catch (dbErr) {
+        res.status(503);
+        throw new Error('Database server busy. Please retry.');
+      }
 
       if (!req.user || !req.user.isActive) {
         res.status(401);
@@ -45,7 +50,8 @@ export const protect = asyncHandler(async (
       }
 
       next();
-    } catch (error) {
+    } catch (error: any) {
+      if (res.statusCode === 503) throw error;
       res.status(401);
       throw new Error('Not authorized, token failed');
     }

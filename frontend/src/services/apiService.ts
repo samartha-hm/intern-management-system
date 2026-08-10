@@ -99,17 +99,19 @@ function buildHeaders(authenticated: boolean = true, customHeaders?: Record<stri
  * Process a fetch response: handle 401 auto-logout, parse JSON, throw on errors
  */
 async function handleResponse<T>(response: Response): Promise<T> {
-  // Auto-logout on 401
+  // Handle 401 Unauthorized
   if (response.status === 401) {
-    try {
-      localStorage.removeItem('persist:root');
-    } catch {
-      // Ignore storage errors
-    }
-    if (window.location.pathname !== '/login') {
+    const isAuthCheck = response.url.includes('/auth/me') || response.url.includes('/auth/login');
+    if (isAuthCheck && window.location.pathname !== '/login') {
+      try {
+        localStorage.removeItem('persist:root');
+        localStorage.removeItem('raw_auth_token');
+      } catch {
+        // Ignore storage errors
+      }
       window.location.href = '/login';
     }
-    throw new ApiError('Session expired. Please login again.', 401);
+    throw new ApiError('Session expired or unauthorized. Please login again.', 401);
   }
 
   // Handle 403 Forbidden
