@@ -9,9 +9,9 @@ export const submitWorkDiary = asyncHandler(async (req: Request, res: Response) 
   const userId = req.user!.id;
   const { tasksDone, hoursSpent, blockers, learnings } = req.body;
 
-  if (!tasksDone || !hoursSpent) {
+  if (!tasksDone) {
     res.status(400);
-    throw new Error('Tasks done and hours spent are required');
+    throw new Error('Work accomplishment summary is required');
   }
 
   const todayStart = new Date();
@@ -19,6 +19,26 @@ export const submitWorkDiary = asyncHandler(async (req: Request, res: Response) 
 
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
+
+  // Auto-calculate work hours from today's attendance check-in & check-out logs
+  const todayAtt = await prisma.attendance.findFirst({
+    where: {
+      userId,
+      date: {
+        gte: todayStart,
+        lte: todayEnd,
+      },
+    },
+  });
+
+  let computedHours = hoursSpent ? parseFloat(hoursSpent) : 0;
+  if (todayAtt?.workHours && todayAtt.workHours > 0) {
+    computedHours = todayAtt.workHours;
+  } else if (todayAtt?.checkInTime) {
+    const checkOutMs = todayAtt.checkOutTime ? new Date(todayAtt.checkOutTime).getTime() : new Date().getTime();
+    const diffMs = checkOutMs - new Date(todayAtt.checkInTime).getTime();
+    computedHours = Math.round((Math.max(0, diffMs) / (1000 * 60 * 60)) * 100) / 100;
+  }
 
   const existingEntry = await prisma.workDiary.findFirst({
     where: {
@@ -35,7 +55,7 @@ export const submitWorkDiary = asyncHandler(async (req: Request, res: Response) 
       where: { id: existingEntry.id },
       data: {
         tasksDone,
-        hoursSpent: parseFloat(hoursSpent),
+        hoursSpent: computedHours,
         blockers,
         learnings,
         status: 'SUBMITTED',
@@ -47,7 +67,7 @@ export const submitWorkDiary = asyncHandler(async (req: Request, res: Response) 
       data: {
         userId,
         tasksDone,
-        hoursSpent: parseFloat(hoursSpent),
+        hoursSpent: computedHours,
         blockers,
         learnings,
         status: 'SUBMITTED',

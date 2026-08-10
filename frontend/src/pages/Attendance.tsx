@@ -212,7 +212,6 @@ const Attendance: React.FC = () => {
         await apiService.post('/attendance/check-out', { notes: todayWorkSummary, nonce: nonceToSend });
         await apiService.post('/work-diary', {
           tasksDone: todayWorkSummary,
-          hoursSpent: todayHoursSpent || 8.0,
           date: todayStr,
         }).catch(() => {});
 
@@ -362,9 +361,8 @@ const Attendance: React.FC = () => {
   };
 
   // Submit Work Diary Summary & Proceed to Check-Out
-  const handleDiaryAndCheckOutSubmit = (values: { workSummary: string; hoursSpent?: number }) => {
+  const handleDiaryAndCheckOutSubmit = (values: { workSummary: string }) => {
     setTodayWorkSummary(values.workSummary);
-    setTodayHoursSpent(values.hoursSpent ? Number(values.hoursSpent) : 8.0);
     setIsCheckOutDiaryModalOpen(false);
     setQrActionType('CHECK_OUT');
     setIsQrModalOpen(true);
@@ -753,9 +751,6 @@ const Attendance: React.FC = () => {
         <Form form={diaryForm} layout="vertical" onFinish={handleDiaryAndCheckOutSubmit} style={{ marginTop: 16 }}>
           <Form.Item name="workSummary" label={<span style={{ fontWeight: 700, fontSize: 14 }}>Today's Work Summary</span>} rules={[{ required: true, message: 'Please enter today\'s work summary' }]}>
             <TextArea rows={4} placeholder="Enter your work accomplishments or summary for today..." />
-          </Form.Item>
-          <Form.Item name="hoursSpent" label={<span style={{ fontWeight: 700, fontSize: 14 }}>Hours Spent Today</span>} initialValue={8.0} rules={[{ required: true, message: 'Please specify hours spent' }]}>
-            <Input type="number" step="0.5" min="0.5" max="24" placeholder="8.0" addonAfter="hrs" />
           </Form.Item>
         </Form>
       </Modal>
