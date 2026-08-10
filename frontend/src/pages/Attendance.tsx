@@ -29,7 +29,6 @@ const Attendance: React.FC = () => {
   const [isCheckedIn, setIsCheckedIn] = useState<boolean>(false);
   const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
   const [todayWorkSummary, setTodayWorkSummary] = useState<string>('');
-  const [todayHoursSpent, setTodayHoursSpent] = useState<number>(8.0);
 
   // Batch Request States
   const [availableBatches, setAvailableBatches] = useState<any[]>([]);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Layout, Menu, Badge, Popover, List, Typography, Space, Button, Tag } from 'antd';
+import { Layout, Menu, Badge, Popover, List, Typography, Space, Button, Tag, Modal } from 'antd';
 import {
   UserOutlined,
   DashboardOutlined,
@@ -12,6 +12,7 @@ import {
   QrcodeOutlined,
   BellOutlined,
   CheckOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { useAuth } from './contexts/AuthContext';
 import apiService from './services/apiService';
@@ -47,6 +48,38 @@ const App: React.FC = () => {
 
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallAppClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    } else {
+      Modal.info({
+        title: 'Install Experimind IMS Web App',
+        content: (
+          <div style={{ padding: '8px 0', fontSize: 13, lineHeight: 1.6 }}>
+            <p><strong>📲 On Mobile (Android / Chrome / Edge):</strong> Tap the 3 dots menu top-right and select <em>"Install App"</em> or <em>"Add to Home Screen"</em>.</p>
+            <p><strong>🍏 On iPhone / iPad (Safari):</strong> Tap the Share button at the bottom and select <em>"Add to Home Screen"</em>.</p>
+            <p><strong>💻 On Desktop (Chrome / Edge):</strong> Click the install button in your browser address bar or menu.</p>
+          </div>
+        ),
+        okText: 'Got It',
+      });
+    }
+  };
 
   const fetchNotifications = async () => {
     if (!currentUser) return;
@@ -183,7 +216,22 @@ const App: React.FC = () => {
                   Welcome, {currentUser.firstName || ''} {currentUser.lastName || ''} ({currentUser.role})
                 </span>
               </div>
-              <Space size={20}>
+              <Space size={16}>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<DownloadOutlined />}
+                  onClick={handleInstallAppClick}
+                  style={{
+                    borderRadius: 6,
+                    background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                    border: 'none',
+                    fontWeight: 700,
+                  }}
+                >
+                  Install App
+                </Button>
+
                 <Popover content={notificationContent} trigger="click" placement="bottomRight">
                   <Badge count={unreadCount} overflowCount={99}>
                     <Button type="text" icon={<BellOutlined style={{ fontSize: 18, color: '#475569' }} />} />

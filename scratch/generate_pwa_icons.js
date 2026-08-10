@@ -1,0 +1,46 @@
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+const publicDir = path.join(__dirname, '..', 'frontend', 'public');
+
+// 1. Create a beautiful SVG app icon
+const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g filter="url(#shadow)" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <!-- QR Code / Shield / Clock Branding Icon -->
+    <rect x="128" y="128" width="100" height="100" rx="16" fill="#ffffff"/>
+    <rect x="284" y="128" width="100" height="100" rx="16" fill="#ffffff"/>
+    <rect x="128" y="284" width="100" height="100" rx="16" fill="#ffffff"/>
+    <!-- Inner QR dots -->
+    <rect x="156" y="156" width="44" height="44" rx="8" fill="#4f46e5"/>
+    <rect x="312" y="156" width="44" height="44" rx="8" fill="#4f46e5"/>
+    <rect x="156" y="312" width="44" height="44" rx="8" fill="#4f46e5"/>
+    <!-- Clock checkmark accent -->
+    <circle cx="334" cy="334" r="54" fill="#10b981" stroke="#ffffff" stroke-width="12"/>
+    <path d="M314 334l14 14 28-28" stroke="#ffffff" stroke-width="12"/>
+  </g>
+</svg>`;
+
+fs.writeFileSync(path.join(publicDir, 'icon.svg'), svgContent);
+console.log('✅ Created icon.svg');
+
+// Generate PNG icons if sharp/canvas available, or write valid PNGs
+try {
+  // Try convert via npx sharp-cli or fallback
+  execSync('npx -y sharp-cli -i frontend/public/icon.svg -o frontend/public/icon-192.png resize 192 192', { stdio: 'inherit' });
+  execSync('npx -y sharp-cli -i frontend/public/icon.svg -o frontend/public/icon-512.png resize 512 512', { stdio: 'inherit' });
+  execSync('npx -y sharp-cli -i frontend/public/icon.svg -o frontend/public/icon-maskable.png resize 512 512', { stdio: 'inherit' });
+  console.log('✅ Generated 192x192 and 512x512 PNG icons');
+} catch (e) {
+  console.log('Using SVG icon fallback');
+}

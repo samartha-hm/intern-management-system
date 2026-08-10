@@ -1,9 +1,37 @@
 {
-  "short_name": "InternMgmt",
-  "name": "Experimind Labs Intern Management System",
-  "icons": [],
-  "start_url": ".",
+  "short_name": "Experimind IMS",
+  "name": "Experimind Labs — Intern Management System",
+  "description": "Enterprise Intern Management, Daily QR Attendance Clocking, and Work Diary Approvals Platform",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "portrait",
+  "theme_color": "#6366f1",
+  "background_color": "#0f172a",
+  "scope": "/"
 }
