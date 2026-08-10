@@ -34,7 +34,7 @@ const WorkDiaryReview: React.FC = () => {
         department: d.user ? d.user.department || 'Engineering' : 'General',
         date: d.date ? new Date(d.date).toISOString().split('T')[0] : '',
         tasksDone: d.tasksDone,
-        hoursSpent: d.hoursSpent || 8.0,
+        hoursSpent: d.hoursSpent != null ? d.hoursSpent : 8.0,
         status: d.status,
         feedback: d.feedback,
       }));

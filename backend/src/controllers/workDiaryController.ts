@@ -84,8 +84,20 @@ export const getMyWorkDiaries = asyncHandler(async (req: Request, res: Response)
       return aDateStr === dDateStr;
     });
 
+    let finalHours = d.hoursSpent;
+    if (matchedAtt?.workHours && matchedAtt.workHours > 0) {
+      finalHours = matchedAtt.workHours;
+    } else if (matchedAtt?.checkInTime && matchedAtt?.checkOutTime) {
+      const diffMs = new Date(matchedAtt.checkOutTime).getTime() - new Date(matchedAtt.checkInTime).getTime();
+      const actualHours = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
+      if (actualHours >= 0.1) {
+        finalHours = actualHours;
+      }
+    }
+
     return {
       ...d,
+      hoursSpent: finalHours,
       checkInTime: matchedAtt?.checkInTime ? new Date(matchedAtt.checkInTime).toISOString() : null,
       checkOutTime: matchedAtt?.checkOutTime ? new Date(matchedAtt.checkOutTime).toISOString() : null,
     };
@@ -169,8 +181,20 @@ export const getAllWorkDiaries = asyncHandler(async (req: Request, res: Response
       return a.userId === d.userId && aDateStr === dDateStr;
     });
 
+    let finalHours = d.hoursSpent;
+    if (matchedAtt?.workHours && matchedAtt.workHours > 0) {
+      finalHours = matchedAtt.workHours;
+    } else if (matchedAtt?.checkInTime && matchedAtt?.checkOutTime) {
+      const diffMs = new Date(matchedAtt.checkOutTime).getTime() - new Date(matchedAtt.checkInTime).getTime();
+      const actualHours = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
+      if (actualHours >= 0.1) {
+        finalHours = actualHours;
+      }
+    }
+
     return {
       ...d,
+      hoursSpent: finalHours,
       checkInTime: matchedAtt?.checkInTime ? new Date(matchedAtt.checkInTime).toISOString() : null,
       checkOutTime: matchedAtt?.checkOutTime ? new Date(matchedAtt.checkOutTime).toISOString() : null,
     };
