@@ -114,6 +114,7 @@ const Internships: React.FC = () => {
     fetchBatchRequests();
     fetchMentors();
     fetchAvailableInterns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleOpenManageModal = (record: InternshipItem) => {

@@ -49,6 +49,7 @@ const WorkDiary: React.FC = () => {
 
   useEffect(() => {
     fetchMyDiaries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePrintPortfolio = () => {

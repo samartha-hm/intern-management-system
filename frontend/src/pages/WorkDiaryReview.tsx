@@ -48,6 +48,7 @@ const WorkDiaryReview: React.FC = () => {
 
   useEffect(() => {
     fetchWorkDiariesForReview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);

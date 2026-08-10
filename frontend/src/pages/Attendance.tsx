@@ -111,6 +111,7 @@ const Attendance: React.FC = () => {
   useEffect(() => {
     fetchAttendance();
     fetchAvailableBatches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Personalized Intern Contract Details configured by Supervisor / Admin
