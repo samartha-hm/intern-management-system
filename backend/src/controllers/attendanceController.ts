@@ -78,6 +78,7 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
     try {
       const nonceRecord = await prisma.qrNonce.findUnique({ where: { code: nonce } });
       if (nonceRecord) {
+        // Validate server-generated nonce from database
         if (new Date() > nonceRecord.validUntil) {
           res.status(400);
           throw new Error('QR wallpaper has expired for today. Please rescan today\'s kiosk display.');
@@ -86,9 +87,17 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
           res.status(400);
           throw new Error('QR security code is not valid for entrance check-in');
         }
+      } else {
+        // Fallback: validate DAILY-STABLE format nonce (not stored in DB)
+        const todayStr = new Date().toISOString().split('T')[0];
+        const expectedNonce = `ENTRANCE-${todayStr}-DAILY-STABLE`;
+        if (nonce !== expectedNonce) {
+          res.status(400);
+          throw new Error('Invalid QR code. Please scan a valid entrance QR code from the kiosk.');
+        }
       }
     } catch (e: any) {
-      if (e.message?.includes('QR wallpaper') || e.message?.includes('expired') || e.message?.includes('entrance')) throw e;
+      if (e.message?.includes('QR wallpaper') || e.message?.includes('expired') || e.message?.includes('entrance') || e.message?.includes('Invalid QR code')) throw e;
     }
   }
 
@@ -152,6 +161,7 @@ export const checkOut = asyncHandler(async (req: Request, res: Response) => {
     try {
       const nonceRecord = await prisma.qrNonce.findUnique({ where: { code: nonce } });
       if (nonceRecord) {
+        // Validate server-generated nonce from database
         if (new Date() > nonceRecord.validUntil) {
           res.status(400);
           throw new Error('QR wallpaper has expired for today. Please rescan today\'s kiosk display.');
@@ -160,9 +170,17 @@ export const checkOut = asyncHandler(async (req: Request, res: Response) => {
           res.status(400);
           throw new Error('QR security code is not valid for exit check-out');
         }
+      } else {
+        // Fallback: validate DAILY-STABLE format nonce (not stored in DB)
+        const todayStr = new Date().toISOString().split('T')[0];
+        const expectedNonce = `EXIT-${todayStr}-DAILY-STABLE`;
+        if (nonce !== expectedNonce) {
+          res.status(400);
+          throw new Error('Invalid QR code. Please scan a valid exit QR code from the kiosk.');
+        }
       }
     } catch (e: any) {
-      if (e.message?.includes('QR wallpaper') || e.message?.includes('expired') || e.message?.includes('exit')) throw e;
+      if (e.message?.includes('QR wallpaper') || e.message?.includes('expired') || e.message?.includes('exit') || e.message?.includes('Invalid QR code')) throw e;
     }
   }
 
