@@ -20,6 +20,7 @@ export const getUsers = asyncHandler(async (req: Request, res: Response) => {
       isActive: true,
       lastLogin: true,
       createdAt: true,
+      contractDays: true,
     },
     orderBy: {
       createdAt: 'desc',
