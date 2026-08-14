@@ -23,11 +23,12 @@ const KioskSwipe: React.FC = () => {
 
     // Attempt HTML5 Screen Orientation Lock API if supported
     try {
-      if (screen.orientation && (screen.orientation as any).lock) {
+      const screenObj = (window as any).screen;
+      if (screenObj && screenObj.orientation && screenObj.orientation.lock) {
         if (nextAngle === 90 || nextAngle === 270) {
-          await (screen.orientation as any).lock('landscape').catch(() => {});
+          await screenObj.orientation.lock('landscape').catch(() => {});
         } else {
-          await (screen.orientation as any).lock('portrait').catch(() => {});
+          await screenObj.orientation.lock('portrait').catch(() => {});
         }
       }
     } catch {
