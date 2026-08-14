@@ -74,9 +74,9 @@ const App: React.FC = () => {
         title: 'Install Experimind IMS Web App',
         content: (
           <div style={{ padding: '8px 0', fontSize: 13, lineHeight: 1.6 }}>
-            <p><strong>📲 On Mobile (Android / Chrome / Edge):</strong> Tap the 3 dots menu top-right and select <em>"Install App"</em> or <em>"Add to Home Screen"</em>.</p>
-            <p><strong>🍏 On iPhone / iPad (Safari):</strong> Tap the Share button at the bottom and select <em>"Add to Home Screen"</em>.</p>
-            <p><strong>💻 On Desktop (Chrome / Edge):</strong> Click the install button in your browser address bar or menu.</p>
+            <p><strong>���📲 On Mobile (Android / Chrome / Edge):</strong> Tap the 3 dots menu top-right and select <em>"Install App"</em> or <em>"Add to Home Screen"</em>.</p>
+            <p><strong>���🍏 On iPhone / iPad (Safari):</strong> Tap the Share button at the bottom and select <em>"Add to Home Screen"</em>.</p>
+            <p><strong>���💻 On Desktop (Chrome / Edge):</strong> Click the install button in your browser address bar or menu.</p>
           </div>
         ),
         okText: 'Got It',
@@ -126,6 +126,9 @@ const App: React.FC = () => {
         return '/internships';
       case 'INTERN':
         return '/attendance';
+      case 'KIOSK':
+        // Kiosk default to entrance? maybe entrance
+        return '/qr-kiosk/entrance';
       default:
         return '/dashboard';
     }
@@ -141,7 +144,13 @@ const App: React.FC = () => {
 
     const items: any[] = [];
 
-    if (currentUser.role === 'ADMIN' || currentUser.role === 'HR' || currentUser.role === 'MENTOR') {
+    // Determine which menu items to show based on role
+    if (
+      currentUser.role === 'ADMIN' ||
+      currentUser.role === 'HR' ||
+      currentUser.role === 'MENTOR' ||
+      currentUser.role === 'KIOSK'
+    ) {
       items.push(
         { key: '/dashboard', icon: <DashboardOutlined />, label: <Link to="/dashboard">Dashboard & Overview</Link> },
         { key: '/internships', icon: <TeamOutlined />, label: <Link to="/internships">Batches & Join Requests</Link> },
@@ -153,6 +162,7 @@ const App: React.FC = () => {
         { key: '/profile', icon: <IdcardOutlined />, label: <Link to="/profile">My Profile</Link> }
       );
     } else {
+      // INTERN role
       items.push(
         { key: '/attendance', icon: <ClockCircleOutlined />, label: <Link to="/attendance">Attendance & Tenure</Link> },
         { key: '/work-diary', icon: <BookOutlined />, label: <Link to="/work-diary">My Work Diaries</Link> },
@@ -356,7 +366,7 @@ const App: React.FC = () => {
           border: '1px solid rgba(99, 102, 241, 0.3)',
         }}>
           <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            📲 Install Experimind IMS Web App
+            �� 📲 Install Experimind IMS Web App
           </div>
           <Button
             type="primary"
@@ -386,7 +396,7 @@ const App: React.FC = () => {
               padding: 4,
             }}
           >
-            ✕
+            � ✕
           </button>
         </div>
       )}

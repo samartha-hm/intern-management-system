@@ -8,6 +8,7 @@ async function main() {
   console.log('Seeding database...');
 
   const hashedPassword = await bcrypt.hash('password123', 10);
+  const hashedKioskPassword = await bcrypt.hash('EXP@123labs', 10);
 
   // 1. Admin
   const admin = await prisma.user.upsert({
@@ -69,11 +70,28 @@ async function main() {
     },
   });
 
+  // 5. Kiosk user for tablet
+  const kiosk = await prisma.user.upsert({
+    where: { email: 'kiosk@experimindlabs.com' },
+    update: {},
+    create: {
+      email: 'kiosk@experimindlabs.com',
+      password: hashedKioskPassword,
+      firstName: 'Tablet',
+      lastName: 'Kiosk',
+      role: 'KIOSK',
+      department: 'Operations',
+      position: 'Attendance Kiosk',
+      isActive: true,
+    },
+  });
+
   console.log('Created sample users:');
   console.log(' - Admin: admin@experimindlabs.com / password123');
   console.log(' - HR: hr@experimindlabs.com / password123');
   console.log(' - Mentor: mentor@experimindlabs.com / password123');
   console.log(' - Intern: intern@experimindlabs.com / password123');
+  console.log(' - Kiosk: kiosk@experimindlabs.com / EXP@123labs');
 
   console.log('Seeding completed successfully!');
 }
