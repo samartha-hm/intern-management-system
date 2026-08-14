@@ -87,8 +87,15 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
     }
   };
 
-  // Only use side-by-side flex layout when screen width is at least 680px AND wider than height
-  const isWideLayout = windowDimensions.width >= 680 && windowDimensions.width > windowDimensions.height;
+  // Triple-Failsafe PWA Tablet Landscape Detection
+  const screenObj = (window as any).screen;
+  const isLandscapeMatchMedia = window.matchMedia && window.matchMedia('(orientation: landscape)').matches;
+  const isScreenLandscapeType = screenObj && screenObj.orientation && screenObj.orientation.type && screenObj.orientation.type.includes('landscape');
+  
+  const isWideLayout =
+    (windowDimensions.width >= 640 && windowDimensions.width > windowDimensions.height) ||
+    isLandscapeMatchMedia ||
+    isScreenLandscapeType;
 
   const todayStr = currentTime.toISOString().split('T')[0];
   const checkOutPayload = JSON.stringify({

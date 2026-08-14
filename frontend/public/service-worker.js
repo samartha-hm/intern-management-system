@@ -1,4 +1,4 @@
-const CACHE_NAME = 'experimind-ims-v1';
+const CACHE_NAME = 'experimind-ims-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -10,14 +10,15 @@ const ASSETS_TO_CACHE = [
 
 // Install Service Worker & cache critical PWA shell assets
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
-// Activate Service Worker & clean up old caches
+// Activate Service Worker & aggressively clean up all old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -30,12 +31,14 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Network First, fallback to Cache for seamless app experience
+// Network First for all requests, fallback to Cache for offline app experience
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests and non-API calls
   if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
     return;
   }
+
+  // HTML Navigation requests should NEVER be served from stale cache if network is available
+  const isHtmlNavigation = event.request.headers.get('accept')?.includes('text/html') || event.request.mode === 'navigate';
 
   event.respondWith(
     (async () => {
@@ -51,8 +54,7 @@ self.addEventListener('fetch', (event) => {
           const cached = await caches.match(event.request);
           if (cached) return cached;
 
-          const isHtml = event.request.headers.get('accept')?.includes('text/html') || event.request.mode === 'navigate';
-          if (isHtml) {
+          if (isHtmlNavigation) {
             const indexCached = await caches.match('/index.html');
             if (indexCached) return indexCached;
           }
