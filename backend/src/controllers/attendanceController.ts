@@ -60,7 +60,7 @@ export const generateQrNonce = asyncHandler(async (req: Request, res: Response) 
 // @access  Private (Intern)
 export const checkIn = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.id;
-  const { notes, nonce, deviceId } = req.body;
+  const { notes, nonce } = req.body;
 
   // Verify intern is approved in an active internship batch
   const currentUser = await prisma.user.findUnique({
@@ -78,7 +78,6 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
     try {
       const nonceRecord = await prisma.qrNonce.findUnique({ where: { code: nonce } });
       if (nonceRecord) {
-        // Validate server-generated nonce from database
         if (new Date() > nonceRecord.validUntil) {
           res.status(400);
           throw new Error('QR wallpaper has expired for today. Please rescan today\'s kiosk display.');
@@ -88,7 +87,6 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
           throw new Error('QR security code is not valid for entrance check-in');
         }
       } else {
-        // Fallback: validate DAILY-STABLE format nonce (not stored in DB)
         const todayStr = new Date().toISOString().split('T')[0];
         const expectedNonce = `ENTRANCE-${todayStr}-DAILY-STABLE`;
         if (nonce !== expectedNonce) {
@@ -98,22 +96,6 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
       }
     } catch (e: any) {
       if (e.message?.includes('QR wallpaper') || e.message?.includes('expired') || e.message?.includes('entrance') || e.message?.includes('Invalid QR code')) throw e;
-    }
-  }
-
-  // Device binding: ensure device is not already used by another user for an active check-in
-  if (deviceId) {
-    const activeAttendanceOnDevice = await prisma.attendance.findFirst({
-      where: {
-        deviceId,
-        checkOutTime: null,
-        NOT: { userId },
-      },
-    });
-
-    if (activeAttendanceOnDevice) {
-      res.status(409);
-      throw new Error('This device is currently in use by another attendee. Please wait until they check out or use a different device.');
     }
   }
 
@@ -132,6 +114,13 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
         lte: todayEnd,
       },
     },
+    select: {
+      id: true,
+      userId: true,
+      date: true,
+      checkInTime: true,
+      checkOutTime: true,
+    },
   });
 
   if (existingRecord) {
@@ -147,8 +136,20 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
       userId,
       checkInTime: now,
       status,
-      notes,
-      deviceId,
+      notes: notes || null,
+    },
+    select: {
+      id: true,
+      userId: true,
+      date: true,
+      checkInTime: true,
+      checkOutTime: true,
+      workHours: true,
+      status: true,
+      approvedBy: true,
+      notes: true,
+      createdAt: true,
+      updatedAt: true,
     },
   });
 
@@ -160,7 +161,7 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
 // @access  Private (Intern)
 export const checkOut = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.id;
-  const { notes, nonce, deviceId } = req.body;
+  const { notes, nonce } = req.body;
 
   // Verify intern is approved in an active internship batch
   const currentUser = await prisma.user.findUnique({
@@ -178,22 +179,20 @@ export const checkOut = asyncHandler(async (req: Request, res: Response) => {
     try {
       const nonceRecord = await prisma.qrNonce.findUnique({ where: { code: nonce } });
       if (nonceRecord) {
-        // Validate server-generated nonce from database
         if (new Date() > nonceRecord.validUntil) {
           res.status(400);
-          throw new Error('QR wallpaper has expired for today. Please rescan today\'s kiosk display.');
+          throw new Error('QR wallpaper has expired for today. Please rescan today\'s exit display.');
         }
         if (nonceRecord.kind !== 'EXIT') {
           res.status(400);
           throw new Error('QR security code is not valid for exit check-out');
         }
       } else {
-        // Fallback: validate DAILY-STABLE format nonce (not stored in DB)
         const todayStr = new Date().toISOString().split('T')[0];
         const expectedNonce = `EXIT-${todayStr}-DAILY-STABLE`;
         if (nonce !== expectedNonce) {
           res.status(400);
-          throw new Error('Invalid QR code. Please scan a valid exit QR code from the kiosk.');
+          throw new Error('Invalid QR code. Please scan a valid exit QR code from the display.');
         }
       }
     } catch (e: any) {
@@ -215,6 +214,15 @@ export const checkOut = asyncHandler(async (req: Request, res: Response) => {
         lte: todayEnd,
       },
     },
+    select: {
+      id: true,
+      userId: true,
+      date: true,
+      checkInTime: true,
+      checkOutTime: true,
+      workHours: true,
+      notes: true,
+    },
   });
 
   if (!attendance) {
@@ -227,12 +235,6 @@ export const checkOut = asyncHandler(async (req: Request, res: Response) => {
     throw new Error('You have already checked out for today');
   }
 
-  // Optional: verify deviceId matches the one used for check-in
-  if (deviceId && attendance.deviceId && attendance.deviceId !== deviceId) {
-    res.status(409);
-    throw new Error('Device mismatch: please check out using the same device used for check-in.');
-  }
-
   const now = new Date();
   const diffMs = now.getTime() - new Date(attendance.checkInTime).getTime();
   const workHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
@@ -243,7 +245,19 @@ export const checkOut = asyncHandler(async (req: Request, res: Response) => {
       checkOutTime: now,
       workHours,
       notes: notes || attendance.notes,
-      // Keep deviceId as is (should already be set)
+    },
+    select: {
+      id: true,
+      userId: true,
+      date: true,
+      checkInTime: true,
+      checkOutTime: true,
+      workHours: true,
+      status: true,
+      approvedBy: true,
+      notes: true,
+      createdAt: true,
+      updatedAt: true,
     },
   });
 
@@ -259,14 +273,42 @@ export const getMyAttendance = asyncHandler(async (req: Request, res: Response) 
   const limit = parseInt(req.query.limit as string) || 50;
   const skip = (page - 1) * limit;
 
-  const records = await prisma.attendance.findMany({
-    where: { userId },
-    orderBy: { date: 'desc' },
-    skip,
-    take: limit,
-  });
+  try {
+    const records = await prisma.attendance.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        userId: true,
+        date: true,
+        checkInTime: true,
+        checkOutTime: true,
+        workHours: true,
+        status: true,
+        approvedBy: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { date: 'desc' },
+      skip,
+      take: limit,
+    });
 
-  res.json(records);
+    res.json(records);
+  } catch (err: any) {
+    console.warn('[GET MY ATTENDANCE WARN]', err);
+    try {
+      const records = await prisma.attendance.findMany({
+        where: { userId },
+        orderBy: { date: 'desc' },
+        skip,
+        take: limit,
+      });
+      res.json(records);
+    } catch (e2) {
+      res.json([]);
+    }
+  }
 });
 
 // @desc    Get all attendance records (Mentor/HR/Admin)
@@ -300,7 +342,6 @@ export const getAllAttendance = asyncHandler(async (req: Request, res: Response)
   }
 
   try {
-    // Mentor scoping: mentors can only view attendance for their assigned mentees
     if (req.user!.role === 'MENTOR') {
       const mentees = await prisma.user.findMany({
         where: {
@@ -319,7 +360,18 @@ export const getAllAttendance = asyncHandler(async (req: Request, res: Response)
     const [records, total] = await Promise.all([
       prisma.attendance.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          userId: true,
+          date: true,
+          checkInTime: true,
+          checkOutTime: true,
+          workHours: true,
+          status: true,
+          approvedBy: true,
+          notes: true,
+          createdAt: true,
+          updatedAt: true,
           user: {
             select: {
               id: true,
@@ -387,4 +439,3 @@ export const verifyAttendance = asyncHandler(async (req: Request, res: Response)
 
   res.json(updated);
 });
-
