@@ -23,14 +23,14 @@ const KioskSwipe: React.FC = () => {
 
   const handleConfirmLogout = async () => {
     if (!enteredPassword) {
-      message.warning('Please enter the password to exit Kiosk Mode');
+      message.warning('Please enter the password to exit');
       return;
     }
 
     // Verify kiosk/admin password (EXP@123labs or password123)
     const validPasswords = ['EXP@123labs', 'password123', 'EXP@123labs'.toLowerCase()];
     if (!validPasswords.includes(enteredPassword.trim())) {
-      message.error('Incorrect password. Logout authorization failed.');
+      message.error('Incorrect password. Authorization failed.');
       setEnteredPassword('');
       return;
     }
@@ -38,7 +38,7 @@ const KioskSwipe: React.FC = () => {
     try {
       setVerifying(true);
       await logout();
-      message.success('Kiosk session ended. Logged out successfully.');
+      message.success('Session ended. Logged out successfully.');
       setIsModalVisible(false);
       navigate('/login', { replace: true });
     } catch {
@@ -82,16 +82,16 @@ const KioskSwipe: React.FC = () => {
       <div
         style={{
           position: 'fixed',
-          top: 20,
+          top: 16,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000,
           display: 'flex',
-          gap: 12,
+          gap: 10,
           alignItems: 'center',
           background: 'rgba(15, 23, 42, 0.85)',
           backdropFilter: 'blur(16px)',
-          padding: '8px 18px',
+          padding: '6px 16px',
           borderRadius: 30,
           border: '1px solid rgba(255, 255, 255, 0.15)',
           boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
@@ -103,7 +103,7 @@ const KioskSwipe: React.FC = () => {
             border: 'none',
             background: activeTab === 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'transparent',
             color: activeTab === 0 ? '#ffffff' : '#94a3b8',
-            padding: '8px 22px',
+            padding: '7px 20px',
             borderRadius: 22,
             fontWeight: 800,
             fontSize: 13,
@@ -116,7 +116,7 @@ const KioskSwipe: React.FC = () => {
           }}
         >
           <LoginOutlined style={{ fontSize: 14 }} />
-          <span>ENTRANCE KIOSK</span>
+          <span>ENTRANCE</span>
         </button>
 
         <SwapOutlined style={{ color: '#64748b', fontSize: 14 }} />
@@ -127,7 +127,7 @@ const KioskSwipe: React.FC = () => {
             border: 'none',
             background: activeTab === 1 ? 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)' : 'transparent',
             color: activeTab === 1 ? '#ffffff' : '#94a3b8',
-            padding: '8px 22px',
+            padding: '7px 20px',
             borderRadius: 22,
             fontWeight: 800,
             fontSize: 13,
@@ -140,24 +140,24 @@ const KioskSwipe: React.FC = () => {
           }}
         >
           <LogoutOutlined style={{ fontSize: 14 }} />
-          <span>EXIT KIOSK</span>
+          <span>EXIT</span>
         </button>
       </div>
 
       {/* Separate Top-Right Floating Secure Logout Button */}
       <button
         onClick={handleOpenLogoutModal}
-        title="Exit Kiosk Mode (Password Required)"
+        title="Exit Display Mode (Password Required)"
         style={{
           position: 'fixed',
-          top: 20,
+          top: 16,
           right: 20,
           zIndex: 1001,
           background: 'rgba(15, 23, 42, 0.8)',
           backdropFilter: 'blur(12px)',
           border: '1px solid rgba(239, 68, 68, 0.4)',
           color: '#fca5a5',
-          padding: '8px 16px',
+          padding: '7px 16px',
           borderRadius: 22,
           fontWeight: 800,
           fontSize: 12,
@@ -169,8 +169,8 @@ const KioskSwipe: React.FC = () => {
           transition: 'all 0.3s ease',
         }}
       >
-        <LockOutlined style={{ color: '#ef4444', fontSize: 14 }} />
-        <span>EXIT KIOSK</span>
+        <LockOutlined style={{ color: '#ef4444', fontSize: 13 }} />
+        <span>LOGOUT</span>
       </button>
 
       {/* Password Verification Modal */}
@@ -193,7 +193,7 @@ const KioskSwipe: React.FC = () => {
       >
         <div style={{ padding: '12px 0' }}>
           <p style={{ color: '#475569', fontSize: 14, marginBottom: 16 }}>
-            Please enter the Kiosk / Admin password to log out of Kiosk Mode.
+            Please enter the Admin password to log out.
           </p>
           <Input.Password
             placeholder="Enter password..."
