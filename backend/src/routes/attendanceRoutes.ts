@@ -11,8 +11,8 @@ import {
 
 const router = express.Router();
 
-// Kiosk public/authenticated QR Nonce generator
-router.get('/qr-nonce', generateQrNonce);
+// Authenticated QR Nonce generator for kiosk displays
+router.get('/qr-nonce', protect, generateQrNonce);
 
 router.post('/check-in', protect, checkIn);
 router.post('/check-out', protect, checkOut);

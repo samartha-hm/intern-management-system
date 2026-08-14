@@ -62,9 +62,15 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     throw new Error('Please provide email, password, firstName, and lastName');
   }
 
-  if (password.length < 6) {
+  if (password.length < 8) {
     res.status(400);
-    throw new Error('Password must be at least 6 characters long');
+    throw new Error('Password must be at least 8 characters long.');
+  }
+
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+  if (!passwordRegex.test(password)) {
+    res.status(400);
+    throw new Error('Password must contain at least one uppercase letter, one lowercase letter, and one number.');
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

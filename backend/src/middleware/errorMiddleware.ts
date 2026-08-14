@@ -49,12 +49,12 @@ export const errorHandler = (
     message = 'Server database is currently busy. Please try again in a few seconds.';
   }
 
-  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+  const isDev = process.env.NODE_ENV === 'development';
 
   res.status(statusCode).json({
     status: 'error',
     message,
-    ...(isProduction ? {} : { stack: err.stack }),
+    ...(isDev ? { stack: err.stack } : {}),
   });
 };
 

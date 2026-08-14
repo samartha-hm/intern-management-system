@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Layout, Menu, Badge, Popover, List, Typography, Space, Button, Tag, Modal } from 'antd';
+import { Layout, Menu, Badge, Popover, List, Typography, Space, Button, Tag, Modal, Spin } from 'antd';
 import {
   UserOutlined,
   DashboardOutlined,
@@ -17,22 +17,23 @@ import {
 import { useAuth } from './contexts/AuthContext';
 import apiService from './services/apiService';
 
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import Dashboard from './pages/Dashboard';
-import Internships from './pages/Internships';
-import Applications from './pages/Applications';
-import Profile from './pages/Profile';
-import Users from './pages/Users';
-import Reports from './pages/Reports';
-import Attendance from './pages/Attendance';
-import WorkDiary from './pages/WorkDiary';
-import AttendanceReview from './pages/AttendanceReview';
-import WorkDiaryReview from './pages/WorkDiaryReview';
-import CheckInQrKiosk from './pages/CheckInQrKiosk';
-import CheckOutQrKiosk from './pages/CheckOutQrKiosk';
-import KioskSwipe from './components/KioskSwipe';
-import NotFound from './pages/NotFound';
+// Lazy-loaded page components for optimal bundle splitting
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Internships = lazy(() => import('./pages/Internships'));
+const Applications = lazy(() => import('./pages/Applications'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Users = lazy(() => import('./pages/Users'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Attendance = lazy(() => import('./pages/Attendance'));
+const WorkDiary = lazy(() => import('./pages/WorkDiary'));
+const AttendanceReview = lazy(() => import('./pages/AttendanceReview'));
+const WorkDiaryReview = lazy(() => import('./pages/WorkDiaryReview'));
+const CheckInQrKiosk = lazy(() => import('./pages/CheckInQrKiosk'));
+const CheckOutQrKiosk = lazy(() => import('./pages/CheckOutQrKiosk'));
+const KioskSwipe = lazy(() => import('./components/KioskSwipe'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 const { Header, Content, Footer, Sider } = Layout;
 const { Text, Title } = Typography;
@@ -75,9 +76,9 @@ const App: React.FC = () => {
         title: 'Install Experimind IMS Web App',
         content: (
           <div style={{ padding: '8px 0', fontSize: 13, lineHeight: 1.6 }}>
-            <p><strong>���������📲 On Mobile (Android / Chrome / Edge):</strong> Tap the 3 dots menu top-right and select <em>"Install App"</em> or <em>"Add to Home Screen"</em>.</p>
-            <p><strong>���������🍏 On iPhone / iPad (Safari):</strong> Tap the Share button at the bottom and select <em>"Add to Home Screen"</em>.</p>
-            <p><strong>���������💻 On Desktop (Chrome / Edge):</strong> Click the install button in your browser address bar or menu.</p>
+            <p><strong>📲 On Mobile (Android / Chrome / Edge):</strong> Tap the 3 dots menu top-right and select <em>"Install App"</em> or <em>"Add to Home Screen"</em>.</p>
+            <p><strong>🍏 On iPhone / iPad (Safari):</strong> Tap the Share button at the bottom and select <em>"Add to Home Screen"</em>.</p>
+            <p><strong>💻 On Desktop (Chrome / Edge):</strong> Click the install button in your browser address bar or menu.</p>
           </div>
         ),
         okText: 'Got It',
@@ -116,12 +117,16 @@ const App: React.FC = () => {
     }
   };
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
 
   // If user is KIOSK role or kiosk@experimindlabs.com, show the swipe kiosk interface
   const isKioskAccount = currentUser?.role === 'KIOSK' || currentUser?.email?.toLowerCase() === 'kiosk@experimindlabs.com';
   if (isKioskAccount) {
-    return <KioskSwipe />;
+    return (
+      <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#011713', color: '#fff' }}><Spin size="large" /></div>}>
+        <KioskSwipe />
+      </Suspense>
+    );
   }
 
   const getDefaultRouteForRole = (role?: string) => {
@@ -134,7 +139,6 @@ const App: React.FC = () => {
       case 'INTERN':
         return '/attendance';
       case 'KIOSK':
-        // Kiosk default to entrance? maybe entrance
         return '/qr-kiosk/entrance';
       default:
         return '/dashboard';
@@ -151,7 +155,6 @@ const App: React.FC = () => {
 
     const items: any[] = [];
 
-    // Determine which menu items to show based on role
     if (
       currentUser.role === 'ADMIN' ||
       currentUser.role === 'HR' ||
@@ -272,36 +275,38 @@ const App: React.FC = () => {
           ) : null}
         </Header>
         <Content style={{ margin: '24px 16px', padding: 24, background: '#fff', minHeight: 360 }}>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={!currentUser ? <Login /> : <Navigate to={getDefaultRouteForRole(currentUser.role)} replace />} />
-            <Route path="/register" element={!currentUser ? <Register /> : <Navigate to={getDefaultRouteForRole(currentUser.role)} replace />} />
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}><Spin size="large" /></div>}>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={!currentUser ? <Login /> : <Navigate to={getDefaultRouteForRole(currentUser.role)} replace />} />
+              <Route path="/register" element={!currentUser ? <Register /> : <Navigate to={getDefaultRouteForRole(currentUser.role)} replace />} />
 
-            {/* Protected routes */}
-            {currentUser ? (
-              <>
-                <Route path="/" element={<Navigate to={getDefaultRouteForRole(currentUser.role)} replace />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/qr-kiosk/entrance" element={<CheckInQrKiosk />} />
-                <Route path="/qr-kiosk/exit" element={<CheckOutQrKiosk />} />
-                <Route path="/internships" element={<Internships />} />
-                <Route path="/applications" element={<Applications />} />
-                <Route path="/attendance" element={currentUser?.role === 'INTERN' ? <Attendance /> : <Navigate to="/attendance-review" replace />} />
-                <Route path="/work-diary" element={currentUser?.role === 'INTERN' ? <WorkDiary /> : <Navigate to="/work-diary-review" replace />} />
-                <Route path="/attendance-review" element={<AttendanceReview />} />
-                <Route path="/work-diary-review" element={<WorkDiaryReview />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/users" element={<Users />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="*" element={<NotFound />} />
-              </>
-            ) : (
-              <>
-                <Route path="/" element={<Navigate to="/login" replace />} />
-                <Route path="*" element={<Navigate to="/login" replace />} />
-              </>
-            )}
-          </Routes>
+              {/* Protected routes */}
+              {currentUser ? (
+                <>
+                  <Route path="/" element={<Navigate to={getDefaultRouteForRole(currentUser.role)} replace />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/qr-kiosk/entrance" element={<CheckInQrKiosk />} />
+                  <Route path="/qr-kiosk/exit" element={<CheckOutQrKiosk />} />
+                  <Route path="/internships" element={<Internships />} />
+                  <Route path="/applications" element={<Applications />} />
+                  <Route path="/attendance" element={currentUser?.role === 'INTERN' ? <Attendance /> : <Navigate to="/attendance-review" replace />} />
+                  <Route path="/work-diary" element={currentUser?.role === 'INTERN' ? <WorkDiary /> : <Navigate to="/work-diary-review" replace />} />
+                  <Route path="/attendance-review" element={<AttendanceReview />} />
+                  <Route path="/work-diary-review" element={<WorkDiaryReview />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/users" element={<Users />} />
+                  <Route path="/reports" element={<Reports />} />
+                  <Route path="*" element={<NotFound />} />
+                </>
+              ) : (
+                <>
+                  <Route path="/" element={<Navigate to="/login" replace />} />
+                  <Route path="*" element={<Navigate to="/login" replace />} />
+                </>
+              )}
+            </Routes>
+          </Suspense>
         </Content>
         <Footer style={{ textAlign: 'center' }}>
           Experimind Labs Intern Management System © {new Date().getFullYear()}
@@ -373,7 +378,7 @@ const App: React.FC = () => {
           border: '1px solid rgba(99, 102, 241, 0.3)',
         }}>
           <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            ���� �� �� 📲 Install Experimind IMS Web App
+            📲 Install Experimind IMS Web App
           </div>
           <Button
             type="primary"
@@ -403,7 +408,7 @@ const App: React.FC = () => {
               padding: 4,
             }}
           >
-            ��� � � ✕
+            ✕
           </button>
         </div>
       )}
