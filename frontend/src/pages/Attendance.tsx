@@ -11,6 +11,20 @@ import { Html5Qrcode } from 'html5-qrcode';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
+// Helper function to get or create a device ID
+const getDeviceId = (): string => {
+  const DEVICE_ID_KEY = 'experimind_device_id';
+  let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+
+  if (!deviceId) {
+    // Generate a random device ID
+    deviceId = 'device-' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem(DEVICE_ID_KEY, deviceId);
+  }
+
+  return deviceId;
+};
+
 interface AttendanceRecord {
   id: string;
   date: string;
@@ -40,6 +54,7 @@ const Attendance: React.FC = () => {
   const [isCheckOutDiaryModalOpen, setIsCheckOutDiaryModalOpen] = useState<boolean>(false);
   const [qrActionType, setQrActionType] = useState<'CHECK_IN' | 'CHECK_OUT'>('CHECK_IN');
   const [isQrDetected, setIsQrDetected] = useState<boolean>(false);
+  const [scanTab, setScanTab] = useState<'CAMERA' | 'MANUAL' | 'FILE'>('CAMERA');
 
   const [diaryForm] = Form.useForm();
 
@@ -178,7 +193,9 @@ const Attendance: React.FC = () => {
   const [scannedQrContent, setScannedQrContent] = useState<string>('');
   const [availableCameras, setAvailableCameras] = useState<{ id: string; label: string }[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
-  const [scanTab, setScanTab] = useState<'CAMERA' | 'FILE'>('CAMERA');
+
+  // Get device ID for device binding
+  const deviceId = getDeviceId();
 
   // Confirm QR Scanning & Update UI Instantly
   const confirmQrScan = async (overrideContent?: string) => {
@@ -198,7 +215,7 @@ const Attendance: React.FC = () => {
       }
 
       if (qrActionType === 'CHECK_IN') {
-        await apiService.post('/attendance/check-in', { notes: 'QR Kiosk Check-In', nonce: nonceToSend });
+        await apiService.post('/attendance/check-in', { notes: 'QR Kiosk Check-In', nonce: nonceToSend, deviceId });
         message.success('Entrance Check-In Verified & Saved!');
         setIsCheckedIn(true);
         setTodayRecord({
@@ -217,7 +234,7 @@ const Attendance: React.FC = () => {
           setIsCheckOutDiaryModalOpen(true);
           return;
         }
-        await apiService.post('/attendance/check-out', { notes: todayWorkSummary, nonce: nonceToSend });
+        await apiService.post('/attendance/check-out', { notes: todayWorkSummary, nonce: nonceToSend, deviceId });
         await apiService.post('/work-diary', {
           tasksDone: todayWorkSummary,
           date: todayStr,
@@ -455,7 +472,7 @@ const Attendance: React.FC = () => {
                     </div>
                   )}
                   <div style={{ color: '#d97706', fontSize: 13, marginTop: 4, fontWeight: 600 }}>
-                    ⏳ Your request to join this cohort is currently pending review by your Supervisor or System Admin. Attendance scanning will unlock automatically upon approval.
+                    �� ⏳ Your request to join this cohort is currently pending review by your Supervisor or System Admin. Attendance scanning will unlock automatically upon approval.
                   </div>
                 </div>
               }
@@ -544,7 +561,7 @@ const Attendance: React.FC = () => {
 
             {!hasApprovedBatch && (
               <div style={{ marginTop: 16, padding: '12px 14px', background: '#fffbe6', borderRadius: 10, border: '1px solid #ffe58f', textAlign: 'center', fontSize: 13, color: '#d97706', fontWeight: 600 }}>
-                🔒 Attendance Scanning Locked
+                �� 🔒 Attendance Scanning Locked
                 <div style={{ fontSize: 12, fontWeight: 400, color: '#78350f', marginTop: 4 }}>
                   {userBatchStatus === 'REQUESTED'
                     ? 'Your batch enrollment request is pending supervisor approval. Attendance QR clocking will unlock automatically once approved.'

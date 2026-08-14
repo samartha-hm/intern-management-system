@@ -60,7 +60,7 @@ export const generateQrNonce = asyncHandler(async (req: Request, res: Response) 
 // @access  Private (Intern)
 export const checkIn = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.id;
-  const { notes, nonce } = req.body;
+  const { notes, nonce, deviceId } = req.body;
 
   // Verify intern is approved in an active internship batch
   const currentUser = await prisma.user.findUnique({
@@ -101,6 +101,22 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
+  // Device binding: ensure device is not already used by another user for an active check-in
+  if (deviceId) {
+    const activeAttendanceOnDevice = await prisma.attendance.findFirst({
+      where: {
+        deviceId,
+        checkOutTime: null,
+        NOT: { userId },
+      },
+    });
+
+    if (activeAttendanceOnDevice) {
+      res.status(409);
+      throw new Error('This device is currently in use by another attendee. Please wait until they check out or use a different device.');
+    }
+  }
+
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
@@ -132,6 +148,7 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
       checkInTime: now,
       status,
       notes,
+      deviceId,
     },
   });
 
@@ -143,7 +160,7 @@ export const checkIn = asyncHandler(async (req: Request, res: Response) => {
 // @access  Private (Intern)
 export const checkOut = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.id;
-  const { notes, nonce } = req.body;
+  const { notes, nonce, deviceId } = req.body;
 
   // Verify intern is approved in an active internship batch
   const currentUser = await prisma.user.findUnique({
@@ -210,6 +227,12 @@ export const checkOut = asyncHandler(async (req: Request, res: Response) => {
     throw new Error('You have already checked out for today');
   }
 
+  // Optional: verify deviceId matches the one used for check-in
+  if (deviceId && attendance.deviceId && attendance.deviceId !== deviceId) {
+    res.status(409);
+    throw new Error('Device mismatch: please check out using the same device used for check-in.');
+  }
+
   const now = new Date();
   const diffMs = now.getTime() - new Date(attendance.checkInTime).getTime();
   const workHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
@@ -220,6 +243,7 @@ export const checkOut = asyncHandler(async (req: Request, res: Response) => {
       checkOutTime: now,
       workHours,
       notes: notes || attendance.notes,
+      // Keep deviceId as is (should already be set)
     },
   });
 

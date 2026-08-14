@@ -285,6 +285,7 @@ model Attendance {
   status       AttendanceStatus @default(PRESENT)
   workHours    Float?
   notes        String?
+  deviceId     String?
   approvedBy   String?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
@@ -294,6 +295,7 @@ model Attendance {
   @@index([userId])
   @@index([date])
   @@index([status])
+  @@index([deviceId])
 }
 
 enum AttendanceStatus {

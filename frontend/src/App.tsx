@@ -31,6 +31,7 @@ import AttendanceReview from './pages/AttendanceReview';
 import WorkDiaryReview from './pages/WorkDiaryReview';
 import CheckInQrKiosk from './pages/CheckInQrKiosk';
 import CheckOutQrKiosk from './pages/CheckOutQrKiosk';
+import KioskSwipe from './components/KioskSwipe';
 import NotFound from './pages/NotFound';
 
 const { Header, Content, Footer, Sider } = Layout;
@@ -74,9 +75,9 @@ const App: React.FC = () => {
         title: 'Install Experimind IMS Web App',
         content: (
           <div style={{ padding: '8px 0', fontSize: 13, lineHeight: 1.6 }}>
-            <p><strong>���📲 On Mobile (Android / Chrome / Edge):</strong> Tap the 3 dots menu top-right and select <em>"Install App"</em> or <em>"Add to Home Screen"</em>.</p>
-            <p><strong>���🍏 On iPhone / iPad (Safari):</strong> Tap the Share button at the bottom and select <em>"Add to Home Screen"</em>.</p>
-            <p><strong>���💻 On Desktop (Chrome / Edge):</strong> Click the install button in your browser address bar or menu.</p>
+            <p><strong>���������📲 On Mobile (Android / Chrome / Edge):</strong> Tap the 3 dots menu top-right and select <em>"Install App"</em> or <em>"Add to Home Screen"</em>.</p>
+            <p><strong>���������🍏 On iPhone / iPad (Safari):</strong> Tap the Share button at the bottom and select <em>"Add to Home Screen"</em>.</p>
+            <p><strong>���������💻 On Desktop (Chrome / Edge):</strong> Click the install button in your browser address bar or menu.</p>
           </div>
         ),
         okText: 'Got It',
@@ -116,6 +117,11 @@ const App: React.FC = () => {
   };
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+
+  // If user is KIOSK role, show the swipe kiosk interface
+  if (currentUser?.role === 'KIOSK') {
+    return <KioskSwipe />;
+  }
 
   const getDefaultRouteForRole = (role?: string) => {
     switch (role) {
@@ -366,7 +372,7 @@ const App: React.FC = () => {
           border: '1px solid rgba(99, 102, 241, 0.3)',
         }}>
           <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            �� 📲 Install Experimind IMS Web App
+            ���� �� �� 📲 Install Experimind IMS Web App
           </div>
           <Button
             type="primary"
@@ -396,7 +402,7 @@ const App: React.FC = () => {
               padding: 4,
             }}
           >
-            � ✕
+            ��� � � ✕
           </button>
         </div>
       )}

@@ -25,7 +25,13 @@ import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 
-const CheckInQrKiosk: React.FC = () => {
+interface CheckInQrKioskProps {
+  hideExtraUI?: boolean;
+}
+
+const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
+  hideExtraUI = false
+}) => {
   const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -113,6 +119,68 @@ const CheckInQrKiosk: React.FC = () => {
     message.error(`Scan error: ${error}`);
   };
 
+  if (hideExtraUI) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '82vh',
+          gap: 20,
+          padding: 24,
+        }}
+      >
+        <Card
+          style={{
+            width: '100%',
+            maxWidth: 520,
+            borderRadius: 24,
+            boxShadow: '0 25px 50px rgba(16, 185, 129, 0.15)',
+            border: '2px solid #a7f3d0',
+            background: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
+          }}
+        >
+          {/* QR Code Display Area */}
+          <div style={{ padding: 24, background: '#fff', borderRadius: 24, boxShadow: '0 12px 30px rgba(0,0,0,0.08)', border: '2px solid #34d399', marginBottom: 16 }}>
+            <QRCode value={checkInPayload} size={260} color="#047857" icon="/favicon.ico" />
+          </div>
+
+          {/* Scanner Area */}
+          <div style={{ width: '100%', maxWidth: 500, marginTop: 24 }}>
+            <Tag color="blue" style={{ fontSize: 14, padding: '6px 12px', borderRadius: 20, fontWeight: 600, marginBottom: 8 }}>
+              <CameraOutlined style={{ marginRight: 6 }} /> Live Scanner (Rear Camera)
+            </Tag>
+            <div style={{ position: 'relative', border: '2px dashed #34d399', borderRadius: 16, background: '#f0fdf4', minHeight: 280 }}>
+              {isScanning ? (
+                <Spin tip="Initializing camera..." size="large" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
+              ) : scanError ? (
+                <div style={{ padding: 20, textAlign: 'center', color: '#ef4444' }}>
+                  <CameraOutlined style={{ fontSize: 24, marginBottom: 8 }} />
+                  <div style={{ fontWeight: 600 }}>{scanError}</div>
+                </div>
+              ) : lastScan ? (
+                <div style={{ padding: 20, textAlign: 'center' }}>
+                  <CheckOutlined style={{ fontSize: 24, color: '#10b981', marginBottom: 8 }} />
+                  <div style={{ fontWeight: 600, color: '#0f172a' }}>Last scanned:</div>
+                  <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', background: '#fff', padding: 8, borderRadius: 6, marginTop: 4, border: '1px solid #e5e7eb' }}>
+                    {lastScan}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: 30, textAlign: 'center', color: '#6b7280' }}>
+                  <CameraOutlined style={{ fontSize: 28, marginBottom: 12 }} />
+                  <div>Point tablet Camera at a QR code to scan</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -160,7 +228,7 @@ const CheckInQrKiosk: React.FC = () => {
 
           <div style={{ marginBottom: 16 }}>
             <Tag color="cyan" style={{ fontSize: 12, padding: '4px 12px', borderRadius: 12, fontWeight: 600 }}>
-              ������� ����� ����� ��� ����� ��� ��� � ����� ��� ��� � ��� � � ✓ Daily Wallpaper Active • Valid until 11:59 PM Tonight ({todayStr})
+              ��������� ������� ������� ����� ������� ����� ����� ��� ������� ����� ����� ��� ����� ��� ��� � ������� ����� ����� ��� ����� ��� ��� � ����� ��� ��� � ��� � � ✓ Daily Wallpaper Active • Valid until 11:59 PM Tonight ({todayStr})
             </Tag>
           </div>
 
@@ -204,7 +272,7 @@ const CheckInQrKiosk: React.FC = () => {
           </Text>
 
           <Tag color="blue" style={{ marginTop: 12, fontSize: 12, padding: '4px 14px', borderRadius: 20, fontWeight: 600 }}>
-            �������� ������ ������ ���� ������ ���� ���� �� ������ ���� ���� �� ���� �� �� 📍 Experimind Labs HQ — Entrance Kiosk
+            ���������� �������� �������� ������ �������� ������ ������ ���� �������� ������ ������ ���� ������ ���� ���� �� �������� ������ ������ ���� ������ ���� ���� �� ������ ���� ���� �� ���� �� �� 📍 Experimind Labs HQ — Entrance Kiosk
           </Tag>
         </div>
       </Card>

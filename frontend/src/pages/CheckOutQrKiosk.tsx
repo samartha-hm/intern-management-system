@@ -25,7 +25,13 @@ import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 
-const CheckOutQrKiosk: React.FC = () => {
+interface CheckOutQrKioskProps {
+  hideExtraUI?: boolean;
+}
+
+const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
+  hideExtraUI = false
+}) => {
   const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -113,6 +119,68 @@ const CheckOutQrKiosk: React.FC = () => {
     message.error(`Scan error: ${error}`);
   };
 
+  if (hideExtraUI) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '82vh',
+          gap: 20,
+          padding: 24,
+        }}
+      >
+        <Card
+          style={{
+            width: '100%',
+            maxWidth: 520,
+            borderRadius: 24,
+            boxShadow: '0 25px 50px rgba(220, 38, 38, 0.15)',
+            border: '2px solid #fecaca',
+            background: 'linear-gradient(180deg, #ffffff 0%, #fef2f2 100%)',
+          }}
+        >
+          {/* QR Code Display Area */}
+          <div style={{ padding: 24, background: '#fff', borderRadius: 24, boxShadow: '0 12px 30px rgba(0,0,0,0.08)', border: '2px solid #f87171', marginBottom: 16 }}>
+            <QRCode value={checkOutPayload} size={260} color="#b91c1c" icon="/favicon.ico" />
+          </div>
+
+          {/* Scanner Area */}
+          <div style={{ width: '100%', maxWidth: 500, marginTop: 24 }}>
+            <Tag color="blue" style={{ fontSize: 14, padding: '6px 12px', borderRadius: 20, fontWeight: 600, marginBottom: 8 }}>
+              <CameraOutlined style={{ marginRight: 6 }} /> Live Scanner (Rear Camera)
+            </Tag>
+            <div style={{ position: 'relative', border: '2px dashed #f87171', borderRadius: 16, background: '#fef2f2', minHeight: 280 }}>
+              {isScanning ? (
+                <Spin tip="Initializing camera..." size="large" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
+              ) : scanError ? (
+                <div style={{ padding: 20, textAlign: 'center', color: '#dc2626' }}>
+                  <CameraOutlined style={{ fontSize: 24, marginBottom: 8 }} />
+                  <div style={{ fontWeight: 600 }}>{scanError}</div>
+                </div>
+              ) : lastScan ? (
+                <div style={{ padding: 20, textAlign: 'center' }}>
+                  <CheckOutlined style={{ fontSize: 24, color: '#16a34a', marginBottom: 8 }} />
+                  <div style={{ fontWeight: 600, color: '#0f172a' }}>Last scanned:</div>
+                  <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', background: '#fff', padding: 8, borderRadius: 6, marginTop: 4, border: '1px solid #e5e7eb' }}>
+                    {lastScan}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: 30, textAlign: 'center', color: '#6b7280' }}>
+                  <CameraOutlined style={{ fontSize: 28, marginBottom: 12 }} />
+                  <div>Point tablet Camera at a QR code to scan</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -160,70 +228,11 @@ const CheckOutQrKiosk: React.FC = () => {
 
           <div style={{ marginBottom: 16 }}>
             <Tag color="orange" style={{ fontSize: 12, padding: '4px 12px', borderRadius: 12, fontWeight: 600 }}>
-              ��������� ������� ������� ����� ������� ����� ����� ��� ������� ����� ����� ��� ����� ��� ��� � ������� ����� ����� ��� ����� ��� ��� � ����� ��� ��� � ��� � � ✓ Daily Exit Wallpaper Active • Valid until 11:59 PM Tonight ({todayStr})
+              ⚡ Dynamic Security Nonce Updates Daily
             </Tag>
           </div>
-
-          {/* Scanner Area */}
-          <div style={{ width: '100%', maxWidth: 500, marginTop: 24 }}>
-            <Tag color="blue" style={{ fontSize: 14, padding: '6px 12px', borderRadius: 20, fontWeight: 600, marginBottom: 8 }}>
-              <CameraOutlined style={{ marginRight: 6 }} /> Live Scanner (Rear Camera)
-            </Tag>
-            <div style={{ position: 'relative', border: '2px dashed #f87171', borderRadius: 16, background: '#fef2f2', minHeight: 280 }}>
-              {isScanning ? (
-                <Spin tip="Initializing camera..." size="large" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
-              ) : scanError ? (
-                <div style={{ padding: 20, textAlign: 'center', color: '#dc2626' }}>
-                  <CameraOutlined style={{ fontSize: 24, marginBottom: 8 }} />
-                  <div style={{ fontWeight: 600 }}>{scanError}</div>
-                </div>
-              ) : lastScan ? (
-                <div style={{ padding: 20, textAlign: 'center' }}>
-                  <CheckOutlined style={{ fontSize: 24, color: '#16a34a', marginBottom: 8 }} />
-                  <div style={{ fontWeight: 600, color: '#0f172a' }}>Last scanned:</div>
-                  <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', background: '#fff', padding: 8, borderRadius: 6, marginTop: 4, border: '1px solid #e5e7eb' }}>
-                    {lastScan}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ padding: 30, textAlign: 'center', color: '#6b7280' }}>
-                  <CameraOutlined style={{ fontSize: 28, marginBottom: 12 }} />
-                  <div>Point tablet Camera at a QR code to scan</div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' }}>
-          <div style={{ fontSize: 38, fontWeight: 800, color: '#b91c1c', fontFamily: 'monospace', letterSpacing: 1 }}>
-            {currentTime.toLocaleTimeString()}
-          </div>
-          <Text type="secondary" style={{ fontSize: 14, fontWeight: 600 }}>
-            {currentTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </Text>
-
-          <Tag color="blue" style={{ marginTop: 12, fontSize: 12, padding: '4px 14px', borderRadius: 20, fontWeight: 600 }}>
-            ������������ ������������ ������������ ������ ������������ ������ ������ ���� ������������ ������ ������ ���� ������ ���� ���� �� ���������� ���������� ���������� ���� ���������� ���� ���� �� ���������� ���� ���� �� ���� �� �� 📍 Experimind Labs HQ — Exit Doors Kiosk
-          </Tag>
         </div>
       </Card>
-
-      <Space size={12}>
-        <Button type="primary" danger icon={<FullscreenOutlined />} onClick={toggleFullscreen} style={{ height: 44, borderRadius: 10, fontWeight: 700 }}>
-          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Kiosk Mode'}
-        </Button>
-        <Button icon={<PrinterOutlined />} onClick={handlePrint} style={{ height: 44, borderRadius: 10, fontWeight: 700 }}>
-          Print Kiosk Poster
-        </Button>
-      </Space>
-
-      {/* Hidden QR scanner component (we handle UI manually) */}
-      <QrScanner
-        onScanSuccess={handleScanSuccess}
-        onScanError={handleScanError}
-        autoStart
-      />
     </div>
   );
 };
