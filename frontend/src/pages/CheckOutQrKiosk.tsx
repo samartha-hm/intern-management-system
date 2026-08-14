@@ -9,12 +9,10 @@ const { Title, Text } = Typography;
 
 interface CheckOutQrKioskProps {
   hideExtraUI?: boolean;
-  forcedLayout?: 'auto' | 'landscape' | 'portrait';
 }
 
 const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
   hideExtraUI = false,
-  forcedLayout = 'auto',
 }) => {
   const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -89,11 +87,8 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
     }
   };
 
-  // Determine if landscape display mode should be active
-  const isLandscapeMode =
-    forcedLayout === 'landscape' ||
-    (forcedLayout === 'auto' && windowDimensions.width > windowDimensions.height) ||
-    (forcedLayout === 'auto' && windowDimensions.width >= 700);
+  // Check if screen is wider than 640px for side-by-side flex layout
+  const isWideLayout = windowDimensions.width >= 640 && windowDimensions.width > windowDimensions.height;
 
   const todayStr = currentTime.toISOString().split('T')[0];
   const checkOutPayload = JSON.stringify({
@@ -102,6 +97,8 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
     nonce: serverNonce || `EXIT-${todayStr}-DAILY-STABLE`,
     date: todayStr,
   });
+
+  const loginUrl = `${window.location.origin}/login`;
 
   return (
     <div
@@ -112,7 +109,7 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
         justifyContent: 'center',
         minHeight: '100vh',
         width: '100vw',
-        padding: isLandscapeMode ? '50px 24px 20px 24px' : '60px 16px 20px 16px',
+        padding: isWideLayout ? '50px 24px 20px 24px' : '60px 16px 20px 16px',
         background: 'radial-gradient(circle at 50% 20%, #881337 0%, #450a0a 60%, #200404 100%)',
         color: '#fff',
         boxSizing: 'border-box',
@@ -135,12 +132,12 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
       />
 
       {/* Header Info */}
-      <div style={{ textAlign: 'center', zIndex: 2, marginBottom: isLandscapeMode ? 12 : 16 }}>
+      <div style={{ textAlign: 'center', zIndex: 2, marginBottom: isWideLayout ? 12 : 16 }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(248, 113, 113, 0.3)', padding: '5px 16px', borderRadius: 30, marginBottom: 6 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 10px #ef4444' }} />
           <span style={{ color: '#fca5a5', fontWeight: 800, fontSize: 12, letterSpacing: 1.2 }}>LIVE DISPLAY</span>
         </div>
-        <Title level={2} style={{ margin: 0, color: '#ffffff', fontWeight: 900, fontSize: isLandscapeMode ? 28 : 24, letterSpacing: -0.5 }}>
+        <Title level={2} style={{ margin: 0, color: '#ffffff', fontWeight: 900, fontSize: isWideLayout ? 26 : 24, letterSpacing: -0.5 }}>
           Experimind Labs Workplace Exit
         </Title>
         <Text style={{ color: '#94a3b8', fontSize: 14, display: 'block', marginTop: 2 }}>
@@ -148,21 +145,21 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
         </Text>
       </div>
 
-      {/* Main Glassmorphic Display Card (Full Width Landscape Executive View) */}
+      {/* Main Glassmorphic Display Card */}
       <Card
         styles={{
           body: {
-            padding: isLandscapeMode ? '28px 40px' : '24px 24px',
+            padding: isWideLayout ? '28px 36px' : '24px 20px',
             display: 'flex',
-            flexDirection: isLandscapeMode ? 'row' : 'column',
+            flexDirection: isWideLayout ? 'row' : 'column',
             alignItems: 'center',
             justifyContent: 'space-around',
-            gap: isLandscapeMode ? 40 : 20,
+            gap: isWideLayout ? 32 : 16,
           },
         }}
         style={{
-          width: isLandscapeMode ? '94%' : '92%',
-          maxWidth: isLandscapeMode ? 1100 : 460,
+          width: isWideLayout ? '94%' : '90%',
+          maxWidth: isWideLayout ? 1000 : 450,
           borderRadius: 28,
           background: 'rgba(136, 19, 55, 0.45)',
           backdropFilter: 'blur(20px)',
@@ -172,34 +169,33 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
         }}
       >
         {/* Left Side: QR Display Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: isLandscapeMode ? '1 1 45%' : 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: isWideLayout ? '1 1 45%' : 'auto', minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <LogoutOutlined style={{ fontSize: 20, color: '#f87171' }} />
-            <span style={{ fontSize: 16, fontWeight: 800, color: '#fff1f2', letterSpacing: 0.5 }}>EVENING CHECK-OUT</span>
+            <LogoutOutlined style={{ fontSize: 18, color: '#f87171' }} />
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#fff1f2', letterSpacing: 0.5 }}>EVENING CHECK-OUT</span>
           </div>
 
           <div
             style={{
-              padding: 20,
+              padding: 16,
               background: '#ffffff',
-              borderRadius: 26,
+              borderRadius: 24,
               boxShadow: '0 20px 40px rgba(0,0,0,0.35)',
               border: '5px solid #ef4444',
-              marginBottom: 14,
+              marginBottom: 12,
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
             }}
           >
-            {/* Large 300px / 270px QR Code */}
-            <QRCode value={checkOutPayload} size={isLandscapeMode ? 300 : 270} color="#450a0a" icon="/icon-192.png" />
+            <QRCode value={checkOutPayload} size={isWideLayout ? 260 : 230} color="#450a0a" icon="/icon-192.png" />
           </div>
 
           <Tag
             color="error"
             style={{
-              fontSize: 12,
-              padding: '5px 14px',
+              fontSize: 11,
+              padding: '4px 12px',
               borderRadius: 20,
               fontWeight: 700,
               border: 'none',
@@ -219,25 +215,55 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             textAlign: 'center',
-            flex: isLandscapeMode ? '1 1 50%' : 'auto',
-            borderTop: isLandscapeMode ? 'none' : '1px solid rgba(255,255,255,0.1)',
-            borderLeft: isLandscapeMode ? '1px solid rgba(255,255,255,0.15)' : 'none',
-            paddingTop: isLandscapeMode ? 0 : 16,
-            paddingLeft: isLandscapeMode ? 40 : 0,
-            width: isLandscapeMode ? 'auto' : '100%',
+            flex: isWideLayout ? '1 1 50%' : 'auto',
+            borderTop: isWideLayout ? 'none' : '1px solid rgba(255,255,255,0.1)',
+            borderLeft: isWideLayout ? '1px solid rgba(255,255,255,0.15)' : 'none',
+            paddingTop: isWideLayout ? 0 : 14,
+            paddingLeft: isWideLayout ? 28 : 0,
+            width: isWideLayout ? 'auto' : '100%',
+            minWidth: 0,
+            overflow: 'hidden',
           }}
         >
-          <div style={{ fontSize: isLandscapeMode ? 56 : 40, fontWeight: 900, color: '#f87171', fontFamily: 'monospace', letterSpacing: 2, textShadow: '0 0 20px rgba(248,113,113,0.5)' }}>
+          <div style={{ fontSize: isWideLayout ? 48 : 36, fontWeight: 900, color: '#f87171', fontFamily: 'monospace', letterSpacing: 1.5, textShadow: '0 0 20px rgba(248,113,113,0.5)', whiteSpace: 'nowrap' }}>
             {currentTime.toLocaleTimeString()}
           </div>
-          <div style={{ fontSize: isLandscapeMode ? 18 : 15, color: '#cbd5e1', marginTop: 6, fontWeight: 600 }}>
+          <div style={{ fontSize: isWideLayout ? 16 : 14, color: '#cbd5e1', marginTop: 4, fontWeight: 600 }}>
             {currentTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
-          <div style={{ fontSize: isLandscapeMode ? 14 : 13, color: '#94a3b8', marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <SafetyCertificateOutlined style={{ color: '#f87171', fontSize: 16 }} /> 📍 Experimind Labs HQ — Main Exit Gate
+          <div style={{ fontSize: isWideLayout ? 13 : 12, color: '#94a3b8', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <SafetyCertificateOutlined style={{ color: '#f87171', fontSize: 14 }} /> 📍 Experimind Labs HQ — Main Exit
           </div>
         </div>
       </Card>
+
+      {/* Small Login Page QR Code Badge at the Bottom */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          background: 'rgba(15, 23, 42, 0.8)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          padding: '10px 18px',
+          borderRadius: 20,
+          marginTop: 18,
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          zIndex: 2,
+        }}
+      >
+        <div style={{ padding: 6, background: '#ffffff', borderRadius: 12, display: 'flex', border: '2px solid #38bdf8' }}>
+          <QRCode value={loginUrl} size={64} bordered={false} color="#0f172a" />
+        </div>
+        <div style={{ textAlign: 'left' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>📱 Open Login Page on Smartphone</span>
+          </div>
+          <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 2 }}>Scan this QR code to access login portal on your mobile browser</div>
+          <div style={{ fontSize: 11, color: '#38bdf8', fontFamily: 'monospace', marginTop: 2, fontWeight: 700 }}>{loginUrl}</div>
+        </div>
+      </div>
 
       {!hideExtraUI && (
         <div style={{ marginTop: 16, zIndex: 2 }}>
@@ -246,8 +272,8 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
             icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
             onClick={toggleFullscreen}
             style={{
-              height: 44,
-              padding: '0 24px',
+              height: 42,
+              padding: '0 20px',
               borderRadius: 12,
               fontWeight: 700,
               background: '#dc2626',

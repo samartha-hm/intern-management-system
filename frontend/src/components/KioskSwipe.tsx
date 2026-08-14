@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import CheckInQrKiosk from '../pages/CheckInQrKiosk';
 import CheckOutQrKiosk from '../pages/CheckOutQrKiosk';
-import { SwapOutlined, LoginOutlined, LogoutOutlined, LockOutlined, SyncOutlined } from '@ant-design/icons';
+import { SwapOutlined, LoginOutlined, LogoutOutlined, LockOutlined, RotateRightOutlined } from '@ant-design/icons';
 import { Modal, Input, message } from 'antd';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -11,23 +11,30 @@ const KioskSwipe: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [enteredPassword, setEnteredPassword] = useState<string>('');
   const [verifying, setVerifying] = useState<boolean>(false);
-  const [forcedLayout, setForcedLayout] = useState<'auto' | 'landscape' | 'portrait'>('auto');
+  const [rotationAngle, setRotationAngle] = useState<number>(0);
 
   const touchStartX = useRef<number | null>(null);
   const { logout } = useAuth();
   const navigate = useNavigate();
 
-  const toggleLayoutMode = () => {
-    if (forcedLayout === 'auto') {
-      setForcedLayout('landscape');
-      message.info('Layout mode set to Landscape (Side-by-side)');
-    } else if (forcedLayout === 'landscape') {
-      setForcedLayout('portrait');
-      message.info('Layout mode set to Portrait (Stacked)');
-    } else {
-      setForcedLayout('auto');
-      message.info('Layout mode set to Auto (Responsive)');
+  const handleCycleRotation = async () => {
+    const nextAngle = (rotationAngle + 90) % 360;
+    setRotationAngle(nextAngle);
+
+    // Attempt HTML5 Screen Orientation Lock API if supported
+    try {
+      if (screen.orientation && (screen.orientation as any).lock) {
+        if (nextAngle === 90 || nextAngle === 270) {
+          await (screen.orientation as any).lock('landscape').catch(() => {});
+        } else {
+          await (screen.orientation as any).lock('portrait').catch(() => {});
+        }
+      }
+    } catch {
+      // Ignore API restrictions
     }
+
+    message.info(`Display rotated ${nextAngle}°`);
   };
 
   const handleOpenLogoutModal = () => {
@@ -91,7 +98,7 @@ const KioskSwipe: React.FC = () => {
         background: '#011713',
       }}
     >
-      {/* Top Floating Center Navigation Bar (ENTRANCE / EXIT / LAYOUT TOGGLE) */}
+      {/* Top Floating Center Navigation Bar */}
       <div
         style={{
           position: 'fixed',
@@ -158,13 +165,13 @@ const KioskSwipe: React.FC = () => {
 
         <div style={{ width: 1, height: 18, background: 'rgba(255, 255, 255, 0.15)', margin: '0 2px' }} />
 
-        {/* Layout Rotation Toggle Button */}
+        {/* 90-Degree Web Rotation Toggle Button */}
         <button
-          onClick={toggleLayoutMode}
-          title="Toggle Layout Orientation (Landscape / Portrait / Auto)"
+          onClick={handleCycleRotation}
+          title="Rotate Web View 90 Degrees"
           style={{
-            border: 'none',
-            background: 'rgba(255, 255, 255, 0.1)',
+            background: rotationAngle !== 0 ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.1)',
+            border: rotationAngle !== 0 ? '1px solid rgba(56, 189, 248, 0.5)' : 'none',
             color: '#38bdf8',
             padding: '7px 14px',
             borderRadius: 22,
@@ -177,10 +184,8 @@ const KioskSwipe: React.FC = () => {
             transition: 'all 0.3s ease',
           }}
         >
-          <SyncOutlined style={{ fontSize: 13 }} />
-          <span style={{ textTransform: 'uppercase' }}>
-            {forcedLayout === 'landscape' ? 'Landscape' : forcedLayout === 'portrait' ? 'Portrait' : 'Rotate Layout'}
-          </span>
+          <RotateRightOutlined style={{ fontSize: 13, transform: `rotate(${rotationAngle}deg)` }} />
+          <span>{rotationAngle === 0 ? 'Rotate 90°' : `${rotationAngle}°`}</span>
         </button>
       </div>
 
@@ -246,7 +251,7 @@ const KioskSwipe: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Swipeable View Slider Container */}
+      {/* View Slider Container with 90° Rotatable Canvas Support */}
       <div
         style={{
           display: 'flex',
@@ -256,11 +261,29 @@ const KioskSwipe: React.FC = () => {
           transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
-        <div style={{ width: '100vw', height: '100vh', overflowY: 'auto' }}>
-          <CheckInQrKiosk hideExtraUI={true} forcedLayout={forcedLayout} />
+        <div
+          style={{
+            width: '100vw',
+            height: '100vh',
+            overflowY: 'auto',
+            transform: rotationAngle !== 0 ? `rotate(${rotationAngle}deg)` : 'none',
+            transformOrigin: 'center center',
+            transition: 'transform 0.4s ease',
+          }}
+        >
+          <CheckInQrKiosk hideExtraUI={true} />
         </div>
-        <div style={{ width: '100vw', height: '100vh', overflowY: 'auto' }}>
-          <CheckOutQrKiosk hideExtraUI={true} forcedLayout={forcedLayout} />
+        <div
+          style={{
+            width: '100vw',
+            height: '100vh',
+            overflowY: 'auto',
+            transform: rotationAngle !== 0 ? `rotate(${rotationAngle}deg)` : 'none',
+            transformOrigin: 'center center',
+            transition: 'transform 0.4s ease',
+          }}
+        >
+          <CheckOutQrKiosk hideExtraUI={true} />
         </div>
       </div>
     </div>
