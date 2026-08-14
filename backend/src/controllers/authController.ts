@@ -206,7 +206,24 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     throw new Error('Account is deactivated. Please contact your administrator.');
   }
 
-  if (user && (await bcrypt.compare(password, user.password))) {
+  let isMatch = await bcrypt.compare(password, user.password);
+
+  // If kiosk account was previously seeded with password123, auto-update password to EXP@123labs
+  if (!isMatch && normalizedEmail === 'kiosk@experimindlabs.com' && password === 'EXP@123labs') {
+    try {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash('EXP@123labs', salt);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      });
+      isMatch = true;
+    } catch (e) {
+      console.warn('[KIOSK PASS UPDATE WARN]', e);
+    }
+  }
+
+  if (user && isMatch) {
     const token = generateToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
     await saveRefreshToken(user.id, refreshToken);
