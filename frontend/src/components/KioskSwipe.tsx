@@ -21,7 +21,6 @@ const KioskSwipe: React.FC = () => {
     const nextAngle = (rotationAngle + 90) % 360;
     setRotationAngle(nextAngle);
 
-    // Attempt HTML5 Screen Orientation Lock API if supported
     try {
       const screenObj = (window as any).screen;
       if (screenObj && screenObj.orientation && screenObj.orientation.lock) {
@@ -87,10 +86,10 @@ const KioskSwipe: React.FC = () => {
     touchStartX.current = null;
   };
 
+  const isRotatedSideways = rotationAngle === 90 || rotationAngle === 270;
+
   return (
     <div
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
       style={{
         width: '100vw',
         height: '100vh',
@@ -99,125 +98,161 @@ const KioskSwipe: React.FC = () => {
         background: '#011713',
       }}
     >
-      {/* Top Floating Center Navigation Bar */}
+      {/* Whole Stage Canvas Wrapper supporting 90-degree centering */}
       <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         style={{
-          position: 'fixed',
-          top: 16,
+          width: isRotatedSideways ? '100vh' : '100vw',
+          height: isRotatedSideways ? '100vw' : '100vh',
+          position: 'absolute',
+          top: '50%',
           left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 1000,
-          display: 'flex',
-          gap: 10,
-          alignItems: 'center',
-          background: 'rgba(15, 23, 42, 0.85)',
-          backdropFilter: 'blur(16px)',
-          padding: '6px 16px',
-          borderRadius: 30,
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+          transform: `translate(-50%, -50%) rotate(${rotationAngle}deg)`,
+          transformOrigin: 'center center',
+          transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease, height 0.4s ease',
+          overflow: 'hidden',
+          background: '#011713',
         }}
       >
-        <button
-          onClick={() => setActiveTab(0)}
+        {/* Top Floating Center Navigation Bar */}
+        <div
           style={{
-            border: 'none',
-            background: activeTab === 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'transparent',
-            color: activeTab === 0 ? '#ffffff' : '#94a3b8',
-            padding: '7px 20px',
-            borderRadius: 22,
-            fontWeight: 800,
-            fontSize: 13,
-            cursor: 'pointer',
+            position: 'absolute',
+            top: 16,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
             display: 'flex',
+            gap: 10,
             alignItems: 'center',
-            gap: 8,
-            boxShadow: activeTab === 0 ? '0 0 20px rgba(16, 185, 129, 0.5)' : 'none',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(16px)',
+            padding: '6px 16px',
+            borderRadius: 30,
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
           }}
         >
-          <LoginOutlined style={{ fontSize: 14 }} />
-          <span>ENTRANCE</span>
-        </button>
+          <button
+            onClick={() => setActiveTab(0)}
+            style={{
+              border: 'none',
+              background: activeTab === 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'transparent',
+              color: activeTab === 0 ? '#ffffff' : '#94a3b8',
+              padding: '7px 20px',
+              borderRadius: 22,
+              fontWeight: 800,
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: activeTab === 0 ? '0 0 20px rgba(16, 185, 129, 0.5)' : 'none',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <LoginOutlined style={{ fontSize: 14 }} />
+            <span>ENTRANCE</span>
+          </button>
 
-        <SwapOutlined style={{ color: '#64748b', fontSize: 14 }} />
+          <SwapOutlined style={{ color: '#64748b', fontSize: 14 }} />
 
+          <button
+            onClick={() => setActiveTab(1)}
+            style={{
+              border: 'none',
+              background: activeTab === 1 ? 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)' : 'transparent',
+              color: activeTab === 1 ? '#ffffff' : '#94a3b8',
+              padding: '7px 20px',
+              borderRadius: 22,
+              fontWeight: 800,
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: activeTab === 1 ? '0 0 20px rgba(239, 68, 68, 0.5)' : 'none',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <LogoutOutlined style={{ fontSize: 14 }} />
+            <span>EXIT</span>
+          </button>
+
+          <div style={{ width: 1, height: 18, background: 'rgba(255, 255, 255, 0.15)', margin: '0 2px' }} />
+
+          {/* 90-Degree Web Rotation Button */}
+          <button
+            onClick={handleCycleRotation}
+            title="Rotate View 90 Degrees"
+            style={{
+              background: rotationAngle !== 0 ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.1)',
+              border: rotationAngle !== 0 ? '1px solid rgba(56, 189, 248, 0.5)' : 'none',
+              color: '#38bdf8',
+              padding: '7px 14px',
+              borderRadius: 22,
+              fontWeight: 700,
+              fontSize: 12,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              transition: 'all 0.3s ease',
+            }}
+          >
+            <RotateRightOutlined style={{ fontSize: 13 }} />
+            <span>{rotationAngle === 0 ? 'Rotate 90°' : `${rotationAngle}°`}</span>
+          </button>
+        </div>
+
+        {/* Top-Right Floating Secure Logout Button */}
         <button
-          onClick={() => setActiveTab(1)}
+          onClick={handleOpenLogoutModal}
+          title="Exit Display Mode (Password Required)"
           style={{
-            border: 'none',
-            background: activeTab === 1 ? 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)' : 'transparent',
-            color: activeTab === 1 ? '#ffffff' : '#94a3b8',
-            padding: '7px 20px',
+            position: 'absolute',
+            top: 16,
+            right: 20,
+            zIndex: 1001,
+            background: 'rgba(15, 23, 42, 0.8)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            color: '#fca5a5',
+            padding: '7px 16px',
             borderRadius: 22,
             fontWeight: 800,
-            fontSize: 13,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: activeTab === 1 ? '0 0 20px rgba(239, 68, 68, 0.5)' : 'none',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-        >
-          <LogoutOutlined style={{ fontSize: 14 }} />
-          <span>EXIT</span>
-        </button>
-
-        <div style={{ width: 1, height: 18, background: 'rgba(255, 255, 255, 0.15)', margin: '0 2px' }} />
-
-        {/* 90-Degree Web Rotation Toggle Button */}
-        <button
-          onClick={handleCycleRotation}
-          title="Rotate Web View 90 Degrees"
-          style={{
-            background: rotationAngle !== 0 ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.1)',
-            border: rotationAngle !== 0 ? '1px solid rgba(56, 189, 248, 0.5)' : 'none',
-            color: '#38bdf8',
-            padding: '7px 14px',
-            borderRadius: 22,
-            fontWeight: 700,
             fontSize: 12,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
+            boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
             transition: 'all 0.3s ease',
           }}
         >
-          <RotateRightOutlined style={{ fontSize: 13, transform: `rotate(${rotationAngle}deg)` }} />
-          <span>{rotationAngle === 0 ? 'Rotate 90°' : `${rotationAngle}°`}</span>
+          <LockOutlined style={{ color: '#ef4444', fontSize: 13 }} />
+          <span>LOGOUT</span>
         </button>
-      </div>
 
-      {/* Top-Right Floating Secure Logout Button */}
-      <button
-        onClick={handleOpenLogoutModal}
-        title="Exit Display Mode (Password Required)"
-        style={{
-          position: 'fixed',
-          top: 16,
-          right: 20,
-          zIndex: 1001,
-          background: 'rgba(15, 23, 42, 0.8)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(239, 68, 68, 0.4)',
-          color: '#fca5a5',
-          padding: '7px 16px',
-          borderRadius: 22,
-          fontWeight: 800,
-          fontSize: 12,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-          transition: 'all 0.3s ease',
-        }}
-      >
-        <LockOutlined style={{ color: '#ef4444', fontSize: 13 }} />
-        <span>LOGOUT</span>
-      </button>
+        {/* Swipeable Views Slider */}
+        <div
+          style={{
+            display: 'flex',
+            width: isRotatedSideways ? '200vh' : '200vw',
+            height: isRotatedSideways ? '100vw' : '100vh',
+            transform: `translateX(-${activeTab * (isRotatedSideways ? 100 : 100)}${isRotatedSideways ? 'vh' : 'vw'})`,
+            transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        >
+          <div style={{ width: isRotatedSideways ? '100vh' : '100vw', height: isRotatedSideways ? '100vw' : '100vh', overflowY: 'auto' }}>
+            <CheckInQrKiosk hideExtraUI={true} />
+          </div>
+          <div style={{ width: isRotatedSideways ? '100vh' : '100vw', height: isRotatedSideways ? '100vw' : '100vh', overflowY: 'auto' }}>
+            <CheckOutQrKiosk hideExtraUI={true} />
+          </div>
+        </div>
+      </div>
 
       {/* Password Verification Modal */}
       <Modal
@@ -251,42 +286,6 @@ const KioskSwipe: React.FC = () => {
           />
         </div>
       </Modal>
-
-      {/* View Slider Container with 90° Rotatable Canvas Support */}
-      <div
-        style={{
-          display: 'flex',
-          width: '200vw',
-          height: '100vh',
-          transform: `translateX(-${activeTab * 100}vw)`,
-          transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
-      >
-        <div
-          style={{
-            width: '100vw',
-            height: '100vh',
-            overflowY: 'auto',
-            transform: rotationAngle !== 0 ? `rotate(${rotationAngle}deg)` : 'none',
-            transformOrigin: 'center center',
-            transition: 'transform 0.4s ease',
-          }}
-        >
-          <CheckInQrKiosk hideExtraUI={true} />
-        </div>
-        <div
-          style={{
-            width: '100vw',
-            height: '100vh',
-            overflowY: 'auto',
-            transform: rotationAngle !== 0 ? `rotate(${rotationAngle}deg)` : 'none',
-            transformOrigin: 'center center',
-            transition: 'transform 0.4s ease',
-          }}
-        >
-          <CheckOutQrKiosk hideExtraUI={true} />
-        </div>
-      </div>
     </div>
   );
 };

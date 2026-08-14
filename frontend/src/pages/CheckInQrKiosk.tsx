@@ -87,8 +87,8 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
     }
   };
 
-  // Check if screen is wider than 640px for side-by-side flex layout
-  const isWideLayout = windowDimensions.width >= 640 && windowDimensions.width > windowDimensions.height;
+  // Only use side-by-side flex layout when screen width is at least 680px AND wider than height
+  const isWideLayout = windowDimensions.width >= 680 && windowDimensions.width > windowDimensions.height;
 
   const todayStr = currentTime.toISOString().split('T')[0];
   const checkInPayload = JSON.stringify({
@@ -107,13 +107,14 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '100vh',
-        width: '100vw',
+        minHeight: '100%',
+        width: '100%',
         padding: isWideLayout ? '50px 24px 20px 24px' : '60px 16px 20px 16px',
         background: 'radial-gradient(circle at 50% 20%, #064e3b 0%, #022c22 60%, #011713 100%)',
         color: '#fff',
         boxSizing: 'border-box',
         position: 'relative',
+        overflowX: 'hidden',
         overflowY: 'auto',
       }}
     >
@@ -124,8 +125,8 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
           top: '20%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: 600,
-          height: 600,
+          width: 500,
+          height: 500,
           background: 'radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, rgba(0,0,0,0) 70%)',
           pointerEvents: 'none',
         }}
@@ -137,10 +138,10 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
           <span style={{ color: '#6ee7b7', fontWeight: 800, fontSize: 12, letterSpacing: 1.2 }}>LIVE DISPLAY</span>
         </div>
-        <Title level={2} style={{ margin: 0, color: '#ffffff', fontWeight: 900, fontSize: isWideLayout ? 26 : 24, letterSpacing: -0.5 }}>
+        <Title level={2} style={{ margin: 0, color: '#ffffff', fontWeight: 900, fontSize: isWideLayout ? 26 : 22, letterSpacing: -0.5 }}>
           Experimind Labs Workplace Entrance
         </Title>
-        <Text style={{ color: '#94a3b8', fontSize: 14, display: 'block', marginTop: 2 }}>
+        <Text style={{ color: '#94a3b8', fontSize: 13, display: 'block', marginTop: 2 }}>
           Scan this QR code with your smartphone camera to Clock-In
         </Text>
       </div>
@@ -149,7 +150,7 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
       <Card
         styles={{
           body: {
-            padding: isWideLayout ? '28px 36px' : '24px 20px',
+            padding: isWideLayout ? '28px 36px' : '20px 16px',
             display: 'flex',
             flexDirection: isWideLayout ? 'row' : 'column',
             alignItems: 'center',
@@ -158,37 +159,38 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
           },
         }}
         style={{
-          width: isWideLayout ? '94%' : '90%',
-          maxWidth: isWideLayout ? 1000 : 450,
+          width: '92%',
+          maxWidth: isWideLayout ? 980 : 440,
           borderRadius: 28,
           background: 'rgba(6, 78, 59, 0.45)',
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(52, 211, 153, 0.35)',
           boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6), 0 0 35px rgba(16, 185, 129, 0.25)',
           zIndex: 2,
+          boxSizing: 'border-box',
         }}
       >
         {/* Left Side: QR Display Area */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: isWideLayout ? '1 1 45%' : 'auto', minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <LoginOutlined style={{ fontSize: 18, color: '#34d399' }} />
             <span style={{ fontSize: 15, fontWeight: 800, color: '#ecfdf5', letterSpacing: 0.5 }}>MORNING CHECK-IN</span>
           </div>
 
           <div
             style={{
-              padding: 16,
+              padding: 14,
               background: '#ffffff',
-              borderRadius: 24,
+              borderRadius: 22,
               boxShadow: '0 20px 40px rgba(0,0,0,0.35)',
               border: '5px solid #10b981',
-              marginBottom: 12,
+              marginBottom: 10,
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
             }}
           >
-            <QRCode value={checkInPayload} size={isWideLayout ? 260 : 230} color="#022c22" icon="/icon-192.png" />
+            <QRCode value={checkInPayload} size={isWideLayout ? 250 : 220} color="#022c22" icon="/icon-192.png" />
           </div>
 
           <Tag
@@ -218,20 +220,20 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
             flex: isWideLayout ? '1 1 50%' : 'auto',
             borderTop: isWideLayout ? 'none' : '1px solid rgba(255,255,255,0.1)',
             borderLeft: isWideLayout ? '1px solid rgba(255,255,255,0.15)' : 'none',
-            paddingTop: isWideLayout ? 0 : 14,
+            paddingTop: isWideLayout ? 0 : 12,
             paddingLeft: isWideLayout ? 28 : 0,
             width: isWideLayout ? 'auto' : '100%',
             minWidth: 0,
             overflow: 'hidden',
           }}
         >
-          <div style={{ fontSize: isWideLayout ? 48 : 36, fontWeight: 900, color: '#34d399', fontFamily: 'monospace', letterSpacing: 1.5, textShadow: '0 0 20px rgba(52,211,153,0.5)', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: isWideLayout ? 46 : 34, fontWeight: 900, color: '#34d399', fontFamily: 'monospace', letterSpacing: 1.5, textShadow: '0 0 20px rgba(52,211,153,0.5)', whiteSpace: 'nowrap' }}>
             {currentTime.toLocaleTimeString()}
           </div>
-          <div style={{ fontSize: isWideLayout ? 16 : 14, color: '#cbd5e1', marginTop: 4, fontWeight: 600 }}>
+          <div style={{ fontSize: isWideLayout ? 15 : 13, color: '#cbd5e1', marginTop: 4, fontWeight: 600 }}>
             {currentTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
-          <div style={{ fontSize: isWideLayout ? 13 : 12, color: '#94a3b8', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <div style={{ fontSize: isWideLayout ? 12 : 11, color: '#94a3b8', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <SafetyCertificateOutlined style={{ color: '#34d399', fontSize: 14 }} /> 📍 Experimind Labs HQ — Main Entrance
           </div>
         </div>
@@ -242,38 +244,40 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 14,
+          gap: 12,
           background: 'rgba(15, 23, 42, 0.8)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
-          padding: '10px 18px',
+          padding: '8px 16px',
           borderRadius: 20,
-          marginTop: 18,
+          marginTop: 16,
+          maxWidth: '90%',
           boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
           zIndex: 2,
+          boxSizing: 'border-box',
         }}
       >
-        <div style={{ padding: 6, background: '#ffffff', borderRadius: 12, display: 'flex', border: '2px solid #38bdf8' }}>
-          <QRCode value={loginUrl} size={64} bordered={false} color="#0f172a" />
+        <div style={{ padding: 4, background: '#ffffff', borderRadius: 10, display: 'flex', border: '2px solid #38bdf8' }}>
+          <QRCode value={loginUrl} size={54} bordered={false} color="#0f172a" />
         </div>
-        <div style={{ textAlign: 'left' }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ textAlign: 'left', minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 6 }}>
             <span>📱 Open Login Page on Smartphone</span>
           </div>
-          <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 2 }}>Scan this QR code to access login portal on your mobile browser</div>
-          <div style={{ fontSize: 11, color: '#38bdf8', fontFamily: 'monospace', marginTop: 2, fontWeight: 700 }}>{loginUrl}</div>
+          <div style={{ fontSize: 10, color: '#cbd5e1', marginTop: 2 }}>Scan this QR code to access login portal on your mobile browser</div>
+          <div style={{ fontSize: 10, color: '#38bdf8', fontFamily: 'monospace', marginTop: 2, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loginUrl}</div>
         </div>
       </div>
 
       {!hideExtraUI && (
-        <div style={{ marginTop: 16, zIndex: 2 }}>
+        <div style={{ marginTop: 14, zIndex: 2 }}>
           <Button
             type="primary"
             icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
             onClick={toggleFullscreen}
             style={{
-              height: 42,
-              padding: '0 20px',
+              height: 40,
+              padding: '0 18px',
               borderRadius: 12,
               fontWeight: 700,
               background: '#059669',
