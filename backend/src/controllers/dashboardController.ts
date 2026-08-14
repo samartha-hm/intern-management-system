@@ -6,24 +6,38 @@ import prisma from '../lib/prismaClient';
 // @route   GET /api/dashboard/stats
 // @access  Private
 export const getDashboardStats = asyncHandler(async (req: Request, res: Response) => {
-  const totalInterns = await prisma.user.count({
-    where: { role: 'INTERN', isActive: true },
-  });
-
-  const activeInternships = await prisma.internship.count({
-    where: { status: 'ACTIVE' },
-  });
-
-  const pendingApplications = await prisma.application.count({
-    where: { status: 'PENDING' },
-  });
-
-  const completedEvaluations = await prisma.evaluation.count();
-
-  // Calculate average rating from evaluations
-  const evaluations = await prisma.evaluation.findMany({
-    select: { overallRating: true },
-  });
+  const [
+    totalInterns,
+    activeInternships,
+    pendingApplications,
+    completedEvaluations,
+    evaluations,
+    departmentCounts,
+    applicationStatusCounts,
+  ] = await Promise.all([
+    prisma.user.count({
+      where: { role: 'INTERN', isActive: true },
+    }),
+    prisma.internship.count({
+      where: { status: 'ACTIVE' },
+    }),
+    prisma.application.count({
+      where: { status: 'PENDING' },
+    }),
+    prisma.evaluation.count(),
+    prisma.evaluation.findMany({
+      select: { overallRating: true },
+    }),
+    prisma.user.groupBy({
+      by: ['department'],
+      where: { role: 'INTERN', department: { not: null } },
+      _count: { id: true },
+    }),
+    prisma.application.groupBy({
+      by: ['status'],
+      _count: { id: true },
+    }),
+  ]);
 
   let avgPerformanceScore: number | null = null;
   if (evaluations.length > 0) {
@@ -34,23 +48,10 @@ export const getDashboardStats = asyncHandler(async (req: Request, res: Response
     }
   }
 
-  // Department counts
-  const departmentCounts = await prisma.user.groupBy({
-    by: ['department'],
-    where: { role: 'INTERN', department: { not: null } },
-    _count: { id: true },
-  });
-
   const departmentData = departmentCounts.map((d) => ({
     name: d.department || 'General',
     interns: d._count.id,
   }));
-
-  // Application status distribution
-  const applicationStatusCounts = await prisma.application.groupBy({
-    by: ['status'],
-    _count: { id: true },
-  });
 
   const statusColors: Record<string, string> = {
     ACCEPTED: '#10b981',
