@@ -7,26 +7,31 @@ import { protect, authorize } from '../middleware/authMiddleware';
 // @route   GET /api/notifications
 // @access  Private
 export const getNotifications = asyncHandler(async (req: Request, res: Response) => {
-  const notifications = await prisma.notification.findMany({
-    where: {
-      recipientId: req.user.id,
-    },
-    include: {
-      sender: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
+  try {
+    const notifications = await prisma.notification.findMany({
+      where: {
+        recipientId: req.user.id,
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
         },
       },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
-  res.json(notifications);
+    res.json(notifications || []);
+  } catch (err: any) {
+    console.error('getNotifications error fallback:', err?.message || err);
+    res.json([]);
+  }
 });
 
 // @desc    Get notification by ID

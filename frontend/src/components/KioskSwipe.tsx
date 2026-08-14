@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import CheckInQrKiosk from '../pages/CheckInQrKiosk';
 import CheckOutQrKiosk from '../pages/CheckOutQrKiosk';
-import { SwapOutlined, LoginOutlined, LogoutOutlined, LockOutlined } from '@ant-design/icons';
+import { SwapOutlined, LoginOutlined, LogoutOutlined, LockOutlined, SyncOutlined } from '@ant-design/icons';
 import { Modal, Input, message } from 'antd';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -11,10 +11,24 @@ const KioskSwipe: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [enteredPassword, setEnteredPassword] = useState<string>('');
   const [verifying, setVerifying] = useState<boolean>(false);
+  const [forcedLayout, setForcedLayout] = useState<'auto' | 'landscape' | 'portrait'>('auto');
 
   const touchStartX = useRef<number | null>(null);
   const { logout } = useAuth();
   const navigate = useNavigate();
+
+  const toggleLayoutMode = () => {
+    if (forcedLayout === 'auto') {
+      setForcedLayout('landscape');
+      message.info('Layout mode set to Landscape (Side-by-side)');
+    } else if (forcedLayout === 'landscape') {
+      setForcedLayout('portrait');
+      message.info('Layout mode set to Portrait (Stacked)');
+    } else {
+      setForcedLayout('auto');
+      message.info('Layout mode set to Auto (Responsive)');
+    }
+  };
 
   const handleOpenLogoutModal = () => {
     setEnteredPassword('');
@@ -27,7 +41,6 @@ const KioskSwipe: React.FC = () => {
       return;
     }
 
-    // Verify kiosk/admin password (EXP@123labs or password123)
     const validPasswords = ['EXP@123labs', 'password123', 'EXP@123labs'.toLowerCase()];
     if (!validPasswords.includes(enteredPassword.trim())) {
       message.error('Incorrect password. Authorization failed.');
@@ -59,9 +72,9 @@ const KioskSwipe: React.FC = () => {
     const diffX = touchStartX.current - touchEndX;
 
     if (diffX > 50) {
-      setActiveTab(1); // Swipe left -> Exit (1)
+      setActiveTab(1);
     } else if (diffX < -50) {
-      setActiveTab(0); // Swipe right -> Entrance (0)
+      setActiveTab(0);
     }
     touchStartX.current = null;
   };
@@ -78,7 +91,7 @@ const KioskSwipe: React.FC = () => {
         background: '#011713',
       }}
     >
-      {/* Top Floating Center Navigation Bar (ENTRANCE / EXIT) */}
+      {/* Top Floating Center Navigation Bar (ENTRANCE / EXIT / LAYOUT TOGGLE) */}
       <div
         style={{
           position: 'fixed',
@@ -142,9 +155,36 @@ const KioskSwipe: React.FC = () => {
           <LogoutOutlined style={{ fontSize: 14 }} />
           <span>EXIT</span>
         </button>
+
+        <div style={{ width: 1, height: 18, background: 'rgba(255, 255, 255, 0.15)', margin: '0 2px' }} />
+
+        {/* Layout Rotation Toggle Button */}
+        <button
+          onClick={toggleLayoutMode}
+          title="Toggle Layout Orientation (Landscape / Portrait / Auto)"
+          style={{
+            border: 'none',
+            background: 'rgba(255, 255, 255, 0.1)',
+            color: '#38bdf8',
+            padding: '7px 14px',
+            borderRadius: 22,
+            fontWeight: 700,
+            fontSize: 12,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            transition: 'all 0.3s ease',
+          }}
+        >
+          <SyncOutlined style={{ fontSize: 13 }} />
+          <span style={{ textTransform: 'uppercase' }}>
+            {forcedLayout === 'landscape' ? 'Landscape' : forcedLayout === 'portrait' ? 'Portrait' : 'Rotate Layout'}
+          </span>
+        </button>
       </div>
 
-      {/* Separate Top-Right Floating Secure Logout Button */}
+      {/* Top-Right Floating Secure Logout Button */}
       <button
         onClick={handleOpenLogoutModal}
         title="Exit Display Mode (Password Required)"
@@ -217,10 +257,10 @@ const KioskSwipe: React.FC = () => {
         }}
       >
         <div style={{ width: '100vw', height: '100vh', overflowY: 'auto' }}>
-          <CheckInQrKiosk hideExtraUI={true} />
+          <CheckInQrKiosk hideExtraUI={true} forcedLayout={forcedLayout} />
         </div>
         <div style={{ width: '100vw', height: '100vh', overflowY: 'auto' }}>
-          <CheckOutQrKiosk hideExtraUI={true} />
+          <CheckOutQrKiosk hideExtraUI={true} forcedLayout={forcedLayout} />
         </div>
       </div>
     </div>

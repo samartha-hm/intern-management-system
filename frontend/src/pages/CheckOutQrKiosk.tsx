@@ -9,9 +9,13 @@ const { Title, Text } = Typography;
 
 interface CheckOutQrKioskProps {
   hideExtraUI?: boolean;
+  forcedLayout?: 'auto' | 'landscape' | 'portrait';
 }
 
-const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({ hideExtraUI = false }) => {
+const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
+  hideExtraUI = false,
+  forcedLayout = 'auto',
+}) => {
   const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -26,6 +30,7 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({ hideExtraUI = false }
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [serverNonce, setServerNonce] = useState<string>('');
   const [nonceDate, setNonceDate] = useState<string>('');
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
 
   const fetchServerNonce = async () => {
     try {
@@ -44,7 +49,18 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({ hideExtraUI = false }
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
-    return () => clearInterval(timer);
+
+    const handleResize = () => {
+      setScreenWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -65,6 +81,9 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({ hideExtraUI = false }
       }
     }
   };
+
+  const isLandscapeMode =
+    forcedLayout === 'landscape' || (forcedLayout === 'auto' && screenWidth >= 600);
 
   const todayStr = currentTime.toISOString().split('T')[0];
   const checkOutPayload = JSON.stringify({
@@ -106,12 +125,12 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({ hideExtraUI = false }
       />
 
       {/* Header Info */}
-      <div style={{ textAlign: 'center', zIndex: 2, marginBottom: 16 }}>
+      <div style={{ textAlign: 'center', zIndex: 2, marginBottom: 14 }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(248, 113, 113, 0.3)', padding: '5px 16px', borderRadius: 30, marginBottom: 6 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 10px #ef4444' }} />
           <span style={{ color: '#fca5a5', fontWeight: 800, fontSize: 12, letterSpacing: 1.2 }}>LIVE DISPLAY</span>
         </div>
-        <Title level={2} style={{ margin: 0, color: '#ffffff', fontWeight: 900, fontSize: 26, letterSpacing: -0.5 }}>
+        <Title level={2} style={{ margin: 0, color: '#ffffff', fontWeight: 900, fontSize: isLandscapeMode ? 24 : 26, letterSpacing: -0.5 }}>
           Experimind Labs Workplace Exit
         </Title>
         <Text style={{ color: '#94a3b8', fontSize: 14, display: 'block', marginTop: 2 }}>
@@ -123,18 +142,17 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({ hideExtraUI = false }
       <Card
         styles={{
           body: {
-            padding: '24px 28px',
+            padding: isLandscapeMode ? '24px 32px' : '24px 28px',
             display: 'flex',
-            flexDirection: 'row',
-            flexWrap: 'wrap',
+            flexDirection: isLandscapeMode ? 'row' : 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 28,
+            gap: isLandscapeMode ? 36 : 20,
           },
         }}
         style={{
           width: '92%',
-          maxWidth: 820,
+          maxWidth: isLandscapeMode ? 880 : 460,
           borderRadius: 28,
           background: 'rgba(136, 19, 55, 0.45)',
           backdropFilter: 'blur(20px)',
@@ -144,7 +162,7 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({ hideExtraUI = false }
         }}
       >
         {/* Left Side: QR Display Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '1 1 260px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <LogoutOutlined style={{ fontSize: 18, color: '#f87171' }} />
             <span style={{ fontSize: 15, fontWeight: 800, color: '#fff1f2', letterSpacing: 0.5 }}>EVENING CHECK-OUT</span>
@@ -152,18 +170,19 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({ hideExtraUI = false }
 
           <div
             style={{
-              padding: 16,
+              padding: 20,
               background: '#ffffff',
-              borderRadius: 22,
+              borderRadius: 24,
               boxShadow: '0 15px 35px rgba(0,0,0,0.3)',
-              border: '4px solid #ef4444',
+              border: '5px solid #ef4444',
               marginBottom: 12,
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
             }}
           >
-            <QRCode value={checkOutPayload} size={210} color="#450a0a" icon="/icon-192.png" />
+            {/* Increased QR Code Size to 275px */}
+            <QRCode value={checkOutPayload} size={isLandscapeMode ? 260 : 275} color="#450a0a" icon="/icon-192.png" />
           </div>
 
           <Tag
@@ -190,11 +209,13 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({ hideExtraUI = false }
             alignItems: 'center',
             justifyContent: 'center',
             textAlign: 'center',
-            flex: '1 1 260px',
-            paddingLeft: 12,
+            borderTop: isLandscapeMode ? 'none' : '1px solid rgba(255,255,255,0.1)',
+            borderLeft: isLandscapeMode ? '1px solid rgba(255,255,255,0.15)' : 'none',
+            paddingTop: isLandscapeMode ? 0 : 16,
+            paddingLeft: isLandscapeMode ? 32 : 0,
           }}
         >
-          <div style={{ fontSize: 44, fontWeight: 900, color: '#f87171', fontFamily: 'monospace', letterSpacing: 1.5, textShadow: '0 0 15px rgba(248,113,113,0.4)' }}>
+          <div style={{ fontSize: isLandscapeMode ? 46 : 40, fontWeight: 900, color: '#f87171', fontFamily: 'monospace', letterSpacing: 1.5, textShadow: '0 0 15px rgba(248,113,113,0.4)' }}>
             {currentTime.toLocaleTimeString()}
           </div>
           <div style={{ fontSize: 15, color: '#cbd5e1', marginTop: 4, fontWeight: 600 }}>
