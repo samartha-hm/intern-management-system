@@ -1,25 +1,51 @@
 import React, { useState, useRef } from 'react';
 import CheckInQrKiosk from '../pages/CheckInQrKiosk';
 import CheckOutQrKiosk from '../pages/CheckOutQrKiosk';
-import { SwapOutlined, LoginOutlined, LogoutOutlined, PoweroffOutlined } from '@ant-design/icons';
+import { SwapOutlined, LoginOutlined, LogoutOutlined, LockOutlined } from '@ant-design/icons';
+import { Modal, Input, message } from 'antd';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { message } from 'antd';
 
 const KioskSwipe: React.FC = () => {
   const [activeTab, setActiveTab] = useState<number>(0);
+  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+  const [enteredPassword, setEnteredPassword] = useState<string>('');
+  const [verifying, setVerifying] = useState<boolean>(false);
+
   const touchStartX = useRef<number | null>(null);
   const { logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
+  const handleOpenLogoutModal = () => {
+    setEnteredPassword('');
+    setIsModalVisible(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    if (!enteredPassword) {
+      message.warning('Please enter the password to exit Kiosk Mode');
+      return;
+    }
+
+    // Verify kiosk/admin password (EXP@123labs or password123)
+    const validPasswords = ['EXP@123labs', 'password123', 'EXP@123labs'.toLowerCase()];
+    if (!validPasswords.includes(enteredPassword.trim())) {
+      message.error('Incorrect password. Logout authorization failed.');
+      setEnteredPassword('');
+      return;
+    }
+
     try {
+      setVerifying(true);
       await logout();
       message.success('Kiosk session ended. Logged out successfully.');
+      setIsModalVisible(false);
       navigate('/login', { replace: true });
     } catch {
       localStorage.clear();
       window.location.href = '/login';
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -52,20 +78,20 @@ const KioskSwipe: React.FC = () => {
         background: '#011713',
       }}
     >
-      {/* Top Floating Glass Navigation Pills */}
+      {/* Top Floating Center Navigation Bar (ENTRANCE / EXIT) */}
       <div
         style={{
-          position: 'absolute',
+          position: 'fixed',
           top: 20,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000,
           display: 'flex',
-          gap: 10,
+          gap: 12,
           alignItems: 'center',
           background: 'rgba(15, 23, 42, 0.85)',
           backdropFilter: 'blur(16px)',
-          padding: '8px 16px',
+          padding: '8px 18px',
           borderRadius: 30,
           border: '1px solid rgba(255, 255, 255, 0.15)',
           boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
@@ -77,20 +103,20 @@ const KioskSwipe: React.FC = () => {
             border: 'none',
             background: activeTab === 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'transparent',
             color: activeTab === 0 ? '#ffffff' : '#94a3b8',
-            padding: '8px 18px',
+            padding: '8px 22px',
             borderRadius: 22,
             fontWeight: 800,
             fontSize: 13,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 8,
             boxShadow: activeTab === 0 ? '0 0 20px rgba(16, 185, 129, 0.5)' : 'none',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           <LoginOutlined style={{ fontSize: 14 }} />
-          <span>ENTRANCE</span>
+          <span>ENTRANCE KIOSK</span>
         </button>
 
         <SwapOutlined style={{ color: '#64748b', fontSize: 14 }} />
@@ -101,46 +127,84 @@ const KioskSwipe: React.FC = () => {
             border: 'none',
             background: activeTab === 1 ? 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)' : 'transparent',
             color: activeTab === 1 ? '#ffffff' : '#94a3b8',
-            padding: '8px 18px',
+            padding: '8px 22px',
             borderRadius: 22,
             fontWeight: 800,
             fontSize: 13,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 8,
             boxShadow: activeTab === 1 ? '0 0 20px rgba(239, 68, 68, 0.5)' : 'none',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           <LogoutOutlined style={{ fontSize: 14 }} />
-          <span>EXIT</span>
-        </button>
-
-        <div style={{ width: 1, height: 20, background: 'rgba(255, 255, 255, 0.15)', margin: '0 4px' }} />
-
-        <button
-          onClick={handleLogout}
-          title="Exit Kiosk & Logout"
-          style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            color: '#fca5a5',
-            padding: '8px 16px',
-            borderRadius: 22,
-            fontWeight: 800,
-            fontSize: 12,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            transition: 'all 0.3s ease',
-          }}
-        >
-          <PoweroffOutlined style={{ fontSize: 13, color: '#ef4444' }} />
-          <span>LOGOUT</span>
+          <span>EXIT KIOSK</span>
         </button>
       </div>
+
+      {/* Separate Top-Right Floating Secure Logout Button */}
+      <button
+        onClick={handleOpenLogoutModal}
+        title="Exit Kiosk Mode (Password Required)"
+        style={{
+          position: 'fixed',
+          top: 20,
+          right: 20,
+          zIndex: 1001,
+          background: 'rgba(15, 23, 42, 0.8)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(239, 68, 68, 0.4)',
+          color: '#fca5a5',
+          padding: '8px 16px',
+          borderRadius: 22,
+          fontWeight: 800,
+          fontSize: 12,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <LockOutlined style={{ color: '#ef4444', fontSize: 14 }} />
+        <span>EXIT KIOSK</span>
+      </button>
+
+      {/* Password Verification Modal */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#0f172a' }}>
+            <LockOutlined style={{ color: '#ef4444' }} />
+            <span style={{ fontWeight: 800 }}>Admin Password Required</span>
+          </div>
+        }
+        open={isModalVisible}
+        onOk={handleConfirmLogout}
+        onCancel={() => setIsModalVisible(false)}
+        okText="Verify & Logout"
+        cancelText="Cancel"
+        confirmLoading={verifying}
+        okButtonProps={{ danger: true, style: { fontWeight: 700 } }}
+        centered
+        destroyOnClose
+      >
+        <div style={{ padding: '12px 0' }}>
+          <p style={{ color: '#475569', fontSize: 14, marginBottom: 16 }}>
+            Please enter the Kiosk / Admin password to log out of Kiosk Mode.
+          </p>
+          <Input.Password
+            placeholder="Enter password..."
+            value={enteredPassword}
+            onChange={(e) => setEnteredPassword(e.target.value)}
+            onPressEnter={handleConfirmLogout}
+            autoFocus
+            style={{ borderRadius: 10, height: 42 }}
+          />
+        </div>
+      </Modal>
 
       {/* Swipeable View Slider Container */}
       <div
@@ -152,10 +216,10 @@ const KioskSwipe: React.FC = () => {
           transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
-        <div style={{ width: '100vw', height: '100vh' }}>
+        <div style={{ width: '100vw', height: '100vh', overflowY: 'auto' }}>
           <CheckInQrKiosk hideExtraUI={true} />
         </div>
-        <div style={{ width: '100vw', height: '100vh' }}>
+        <div style={{ width: '100vw', height: '100vh', overflowY: 'auto' }}>
           <CheckOutQrKiosk hideExtraUI={true} />
         </div>
       </div>

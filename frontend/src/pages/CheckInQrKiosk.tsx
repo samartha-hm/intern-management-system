@@ -26,6 +26,7 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({ hideExtraUI = false }) 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [serverNonce, setServerNonce] = useState<string>('');
   const [nonceDate, setNonceDate] = useState<string>('');
+  const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
 
   const fetchServerNonce = async () => {
     try {
@@ -44,7 +45,18 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({ hideExtraUI = false }) 
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
-    return () => clearInterval(timer);
+
+    const handleResize = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -81,14 +93,14 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({ hideExtraUI = false }) 
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: hideExtraUI ? '100vh' : '90vh',
-        width: '100%',
-        padding: '32px 16px',
+        minHeight: '100vh',
+        width: '100vw',
+        padding: isLandscape ? '60px 24px 24px 24px' : '70px 16px 24px 16px',
         background: 'radial-gradient(circle at 50% 20%, #064e3b 0%, #022c22 60%, #011713 100%)',
         color: '#fff',
         boxSizing: 'border-box',
         position: 'relative',
-        overflow: 'hidden',
+        overflowY: 'auto',
       }}
     >
       {/* Background Neon Aura Effect */}
@@ -106,25 +118,25 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({ hideExtraUI = false }) 
       />
 
       {/* Header Info */}
-      <div style={{ textAlign: 'center', zIndex: 2, marginBottom: 24 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', padding: '6px 18px', borderRadius: 30, marginBottom: 12 }}>
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
-          <span style={{ color: '#6ee7b7', fontWeight: 800, fontSize: 13, letterSpacing: 1.2 }}>LIVE ENTRANCE KIOSK</span>
+      <div style={{ textAlign: 'center', zIndex: 2, marginBottom: isLandscape ? 12 : 20 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', padding: '5px 16px', borderRadius: 30, marginBottom: 8 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
+          <span style={{ color: '#6ee7b7', fontWeight: 800, fontSize: 12, letterSpacing: 1.2 }}>LIVE ENTRANCE KIOSK</span>
         </div>
-        <Title level={2} style={{ margin: 0, color: '#ffffff', fontWeight: 900, fontSize: hideExtraUI ? 28 : 32, letterSpacing: -0.5 }}>
+        <Title level={2} style={{ margin: 0, color: '#ffffff', fontWeight: 900, fontSize: isLandscape ? 24 : 28, letterSpacing: -0.5 }}>
           Experimind Labs Workplace Entrance
         </Title>
-        <Text style={{ color: '#94a3b8', fontSize: 15, display: 'block', marginTop: 4 }}>
+        <Text style={{ color: '#94a3b8', fontSize: 14, display: 'block', marginTop: 2 }}>
           Scan this daily Entrance QR code with your smartphone camera to Clock-In
         </Text>
       </div>
 
-      {/* Main Glassmorphic Display Card */}
+      {/* Main Glassmorphic Display Card (Responsive Portrait / Landscape) */}
       <Card
-        styles={{ body: { padding: hideExtraUI ? '28px 24px' : '36px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center' } }}
+        styles={{ body: { padding: isLandscape ? '24px 32px' : '28px 24px', display: 'flex', flexDirection: isLandscape ? 'row' : 'column', alignItems: 'center', justifyContent: 'center', gap: isLandscape ? 36 : 16 } }}
         style={{
           width: '100%',
-          maxWidth: 480,
+          maxWidth: isLandscape ? 860 : 460,
           borderRadius: 28,
           background: 'rgba(6, 78, 59, 0.45)',
           backdropFilter: 'blur(20px)',
@@ -133,76 +145,89 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({ hideExtraUI = false }) 
           zIndex: 2,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-          <LoginOutlined style={{ fontSize: 20, color: '#34d399' }} />
-          <span style={{ fontSize: 16, fontWeight: 800, color: '#ecfdf5', letterSpacing: 0.5 }}>MORNING CHECK-IN</span>
+        {/* Left / Top Column: QR Code Display */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <LoginOutlined style={{ fontSize: 18, color: '#34d399' }} />
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#ecfdf5', letterSpacing: 0.5 }}>MORNING CHECK-IN</span>
+          </div>
+
+          <div
+            style={{
+              padding: 20,
+              background: '#ffffff',
+              borderRadius: 24,
+              boxShadow: '0 15px 35px rgba(0,0,0,0.3)',
+              border: '4px solid #10b981',
+              marginBottom: 14,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <QRCode value={checkInPayload} size={isLandscape ? 210 : 230} color="#022c22" icon="/icon-192.png" />
+          </div>
+
+          <Tag
+            color="success"
+            style={{
+              fontSize: 11,
+              padding: '4px 12px',
+              borderRadius: 20,
+              fontWeight: 700,
+              border: 'none',
+              background: 'rgba(16, 185, 129, 0.2)',
+              color: '#6ee7b7',
+            }}
+          >
+            ⚡ Security Nonce Active ({todayStr})
+          </Tag>
         </div>
 
-        {/* High Contrast QR Container */}
+        {/* Right / Bottom Column: Digital Clock & Date */}
         <div
           style={{
-            padding: 24,
-            background: '#ffffff',
-            borderRadius: 24,
-            boxShadow: '0 15px 35px rgba(0,0,0,0.3)',
-            border: '4px solid #10b981',
-            marginBottom: 20,
             display: 'flex',
-            justifyContent: 'center',
+            flexDirection: 'column',
             alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            borderTop: isLandscape ? 'none' : '1px solid rgba(255,255,255,0.1)',
+            borderLeft: isLandscape ? '1px solid rgba(255,255,255,0.15)' : 'none',
+            paddingTop: isLandscape ? 0 : 14,
+            paddingLeft: isLandscape ? 36 : 0,
+            width: isLandscape ? 'auto' : '100%',
           }}
         >
-          <QRCode value={checkInPayload} size={hideExtraUI ? 240 : 260} color="#022c22" icon="/icon-192.png" />
-        </div>
-
-        {/* Live Security Nonce Badge */}
-        <Tag
-          color="success"
-          style={{
-            fontSize: 12,
-            padding: '5px 14px',
-            borderRadius: 20,
-            fontWeight: 700,
-            border: 'none',
-            background: 'rgba(16, 185, 129, 0.2)',
-            color: '#6ee7b7',
-            marginBottom: 20,
-          }}
-        >
-          ⚡ Daily Security Nonce Active • Valid for Today ({todayStr})
-        </Tag>
-
-        {/* Digital Clock & Date */}
-        <div style={{ textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16, width: '100%' }}>
-          <div style={{ fontSize: 36, fontWeight: 900, color: '#34d399', fontFamily: 'monospace', letterSpacing: 1.5, textShadow: '0 0 15px rgba(52,211,153,0.4)' }}>
+          <div style={{ fontSize: isLandscape ? 40 : 34, fontWeight: 900, color: '#34d399', fontFamily: 'monospace', letterSpacing: 1.5, textShadow: '0 0 15px rgba(52,211,153,0.4)' }}>
             {currentTime.toLocaleTimeString()}
           </div>
-          <div style={{ fontSize: 14, color: '#cbd5e1', marginTop: 2, fontWeight: 600 }}>
+          <div style={{ fontSize: 14, color: '#cbd5e1', marginTop: 4, fontWeight: 600 }}>
             {currentTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <SafetyCertificateOutlined style={{ color: '#34d399' }} /> 📍 Experimind Labs HQ — Main Entrance Gate
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <SafetyCertificateOutlined style={{ color: '#34d399' }} /> 📍 Experimind Labs HQ — Main Entrance
           </div>
         </div>
       </Card>
 
       {!hideExtraUI && (
-        <div style={{ marginTop: 24, zIndex: 2 }}>
+        <div style={{ marginTop: 16, zIndex: 2 }}>
           <Button
             type="primary"
             icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
             onClick={toggleFullscreen}
             style={{
-              height: 46,
-              padding: '0 24px',
-              borderRadius: 14,
+              height: 42,
+              padding: '0 20px',
+              borderRadius: 12,
               fontWeight: 700,
               background: '#059669',
               borderColor: '#10b981',
               boxShadow: '0 10px 20px rgba(5, 150, 105, 0.4)',
             }}
           >
-            {isFullscreen ? 'Exit Fullscreen Mode' : 'Enter Fullscreen Kiosk Mode'}
+            {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
           </Button>
         </div>
       )}
