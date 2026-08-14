@@ -281,10 +281,14 @@ export const getAllAttendance = asyncHandler(async (req: Request, res: Response)
   const where: any = {};
 
   if (startDate && endDate) {
-    where.date = {
-      gte: new Date(startDate as string),
-      lte: new Date(endDate as string),
-    };
+    const sDate = new Date(startDate as string);
+    const eDate = new Date(endDate as string);
+    if (!isNaN(sDate.getTime()) && !isNaN(eDate.getTime())) {
+      where.date = {
+        gte: sDate,
+        lte: eDate,
+      };
+    }
   }
 
   if (userId) {
@@ -295,55 +299,67 @@ export const getAllAttendance = asyncHandler(async (req: Request, res: Response)
     where.user = { department: department as string };
   }
 
-  // Mentor scoping: mentors can only view attendance for their assigned mentees
-  if (req.user!.role === 'MENTOR') {
-    const mentees = await prisma.user.findMany({
-      where: {
-        role: 'INTERN',
-        OR: [
-          { assignedBatch: { mentorId: req.user!.id } },
-          { internships: { some: { mentorId: req.user!.id } } },
-        ],
-      },
-      select: { id: true },
-    });
-    const menteeIds = mentees.map((m) => m.id);
-    where.userId = { in: menteeIds };
-  }
+  try {
+    // Mentor scoping: mentors can only view attendance for their assigned mentees
+    if (req.user!.role === 'MENTOR') {
+      const mentees = await prisma.user.findMany({
+        where: {
+          role: 'INTERN',
+          OR: [
+            { assignedBatch: { mentorId: req.user!.id } },
+            { internships: { some: { mentorId: req.user!.id } } },
+          ],
+        },
+        select: { id: true },
+      });
+      const menteeIds = mentees.map((m) => m.id);
+      where.userId = { in: menteeIds };
+    }
 
-  const [records, total] = await Promise.all([
-    prisma.attendance.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            department: true,
+    const [records, total] = await Promise.all([
+      prisma.attendance.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              department: true,
+            },
           },
         },
-      },
-      orderBy: { date: 'desc' },
-      skip,
-      take: limit,
-    }),
-    prisma.attendance.count({ where }),
-  ]);
+        orderBy: { date: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.attendance.count({ where }),
+    ]);
 
-  if (paginate === 'true') {
-    res.json({
-      data: records,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
-      },
-    });
-  } else {
-    res.json(records);
+    if (paginate === 'true') {
+      res.json({
+        data: records,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit),
+        },
+      });
+    } else {
+      res.json(records);
+    }
+  } catch (err) {
+    console.error('[GET ALL ATTENDANCE WARN]', err);
+    if (paginate === 'true') {
+      res.json({
+        data: [],
+        pagination: { total: 0, page: 1, limit, pages: 1 },
+      });
+    } else {
+      res.json([]);
+    }
   }
 });
 
