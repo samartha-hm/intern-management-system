@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, Spin, message } from 'antd';
-import { CameraOutlined } from '@ant-design/icons';
+import { Spin, message } from 'antd';
 import { Html5Qrcode } from 'html5-qrcode';
 
 interface QrScannerProps {

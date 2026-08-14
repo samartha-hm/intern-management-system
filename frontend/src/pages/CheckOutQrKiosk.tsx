@@ -2,24 +2,18 @@ import React, { useState, useEffect } from 'react';
 import {
   Card,
   Typography,
-  Space,
-  Button,
   Tag,
   QRCode,
   Spin,
-  message,
 } from 'antd';
 import {
-  FullscreenOutlined,
   SafetyCertificateOutlined,
   LogoutOutlined,
-  PrinterOutlined,
   CameraOutlined,
   CheckOutlined,
 } from '@ant-design/icons';
 
 import apiService from '../services/apiService';
-import QrScanner from '../components/QrScanner';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -43,12 +37,11 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
   }, [isAuthenticated, currentUser?.role, navigate]);
 
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [serverNonce, setServerNonce] = useState<string>('');
   const [nonceDate, setNonceDate] = useState<string>(''); // date (YYYY-MM-DD) for which nonce is fetched
-  const [lastScan, setLastScan] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
+  const [lastScan] = useState<string | null>(null);
+  const [isScanning] = useState(false);
+  const [scanError] = useState<string | null>(null);
 
   const fetchServerNonce = async () => {
     try {
@@ -81,22 +74,6 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
     }
   }, [nonceDate]);
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      }
-    }
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
-
   const todayStr = currentTime.toISOString().split('T')[0];
 
   const checkOutPayload = JSON.stringify({
@@ -105,19 +82,6 @@ const CheckOutQrKiosk: React.FC<CheckOutQrKioskProps> = ({
     nonce: serverNonce || `EXIT-${todayStr}-DAILY-STABLE`,
     date: todayStr,
   });
-
-  const handleScanSuccess = (decodedText: string) => {
-    setLastScan(decodedText);
-    setScanError(null);
-    message.success(`Scanned: ${decodedText}`);
-    // Example: send to backend for verification (exit)
-    // apiService.post('/attendance/scan', { data: decodedText, type: 'EXIT' });
-  };
-
-  const handleScanError = (error: string) => {
-    setScanError(error);
-    message.error(`Scan error: ${error}`);
-  };
 
   if (hideExtraUI) {
     return (
