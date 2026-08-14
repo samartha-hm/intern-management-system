@@ -1,25 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  Typography,
-  Space,
-  Button,
-  Tag,
-  QRCode,
-  Spin,
-  message,
-} from 'antd';
-import {
-  FullscreenOutlined,
-  SafetyCertificateOutlined,
-  LoginOutlined,
-  PrinterOutlined,
-  CameraOutlined,
-  CheckOutlined,
-} from '@ant-design/icons';
-
+import { Card, Typography, Tag, QRCode, Button } from 'antd';
+import { SafetyCertificateOutlined, LoginOutlined, FullscreenOutlined, FullscreenExitOutlined } from '@ant-design/icons';
 import apiService from '../services/apiService';
-import QrScanner from '../components/QrScanner';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -29,13 +11,10 @@ interface CheckInQrKioskProps {
   hideExtraUI?: boolean;
 }
 
-const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
-  hideExtraUI = false
-}) => {
+const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({ hideExtraUI = false }) => {
   const { currentUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if not authenticated or not kiosk role
   useEffect(() => {
     const isKioskUser = currentUser?.role === 'KIOSK' || currentUser?.email?.toLowerCase() === 'kiosk@experimindlabs.com';
     if (!isAuthenticated || !isKioskUser) {
@@ -46,10 +25,7 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [serverNonce, setServerNonce] = useState<string>('');
-  const [nonceDate, setNonceDate] = useState<string>(''); // date (YYYY-MM-DD) for which nonce is fetched
-  const [lastScan, setLastScan] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
+  const [nonceDate, setNonceDate] = useState<string>('');
 
   const fetchServerNonce = async () => {
     try {
@@ -59,8 +35,7 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
         setNonceDate(new Date().toISOString().split('T')[0]);
       }
     } catch (err) {
-      console.error('Failed to fetch QR nonce', err);
-      // Keep existing nonce if any
+      console.error('Failed to fetch Entrance QR nonce', err);
     }
   };
 
@@ -69,12 +44,9 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
-    return () => {
-      clearInterval(timer);
-    };
+    return () => clearInterval(timer);
   }, []);
 
-  // Refetch nonce if the date changes (e.g., past midnight)
   useEffect(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     if (todayStr !== nonceDate) {
@@ -94,93 +66,13 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const todayStr = currentTime.toISOString().split('T')[0];
-
   const checkInPayload = JSON.stringify({
     type: 'CHECK_IN',
     office: 'EXPERIMIND_LABS_HQ',
     nonce: serverNonce || `ENTRANCE-${todayStr}-DAILY-STABLE`,
     date: todayStr,
   });
-
-  const handleScanSuccess = (decodedText: string) => {
-    setLastScan(decodedText);
-    setScanError(null);
-    message.success(`Scanned: ${decodedText}`);
-    // Example: send to backend for verification
-    // apiService.post('/attendance/scan', { data: decodedText, type: 'ENTRANCE' });
-  };
-
-  const handleScanError = (error: string) => {
-    setScanError(error);
-    message.error(`Scan error: ${error}`);
-  };
-
-  if (hideExtraUI) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '82vh',
-          gap: 20,
-          padding: 24,
-        }}
-      >
-        <Card
-          style={{
-            width: '100%',
-            maxWidth: 520,
-            borderRadius: 24,
-            boxShadow: '0 25px 50px rgba(16, 185, 129, 0.15)',
-            border: '2px solid #a7f3d0',
-            background: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
-          }}
-        >
-          {/* QR Code Display Area */}
-          <div style={{ padding: 24, background: '#fff', borderRadius: 24, boxShadow: '0 12px 30px rgba(0,0,0,0.08)', border: '2px solid #34d399', marginBottom: 16 }}>
-            <QRCode value={checkInPayload} size={260} color="#047857" icon="/favicon.ico" />
-          </div>
-
-          {/* Scanner Area */}
-          <div style={{ width: '100%', maxWidth: 500, marginTop: 24 }}>
-            <Tag color="blue" style={{ fontSize: 14, padding: '6px 12px', borderRadius: 20, fontWeight: 600, marginBottom: 8 }}>
-              <CameraOutlined style={{ marginRight: 6 }} /> Live Scanner (Rear Camera)
-            </Tag>
-            <div style={{ position: 'relative', border: '2px dashed #34d399', borderRadius: 16, background: '#f0fdf4', minHeight: 280 }}>
-              {isScanning ? (
-                <Spin tip="Initializing camera..." size="large" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
-              ) : scanError ? (
-                <div style={{ padding: 20, textAlign: 'center', color: '#ef4444' }}>
-                  <CameraOutlined style={{ fontSize: 24, marginBottom: 8 }} />
-                  <div style={{ fontWeight: 600 }}>{scanError}</div>
-                </div>
-              ) : lastScan ? (
-                <div style={{ padding: 20, textAlign: 'center' }}>
-                  <CheckOutlined style={{ fontSize: 24, color: '#10b981', marginBottom: 8 }} />
-                  <div style={{ fontWeight: 600, color: '#0f172a' }}>Last scanned:</div>
-                  <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', background: '#fff', padding: 8, borderRadius: 6, marginTop: 4, border: '1px solid #e5e7eb' }}>
-                    {lastScan}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ padding: 30, textAlign: 'center', color: '#6b7280' }}>
-                  <CameraOutlined style={{ fontSize: 28, marginBottom: 12 }} />
-                  <div>Point tablet Camera at a QR code to scan</div>
-                </div>
-              )}
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -189,110 +81,131 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '82vh',
-        gap: 20,
-        padding: 24,
-        background: '#f8fafc',
+        minHeight: hideExtraUI ? '100vh' : '90vh',
+        width: '100%',
+        padding: '32px 16px',
+        background: 'radial-gradient(circle at 50% 20%, #064e3b 0%, #022c22 60%, #011713 100%)',
+        color: '#fff',
+        boxSizing: 'border-box',
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
-      <div style={{ textAlign: 'center' }}>
-        <Tag color="green" icon={<SafetyCertificateOutlined />} style={{ fontSize: 13, padding: '4px 14px', borderRadius: 20, marginBottom: 8 }}>
-          OFFICIAL DAILY WORKPLACE ENTRANCE ATTENDANCE KIOSK
-        </Tag>
-        <Title level={2} style={{ margin: 0, fontWeight: 800, color: '#0f172a' }}>Experimind Labs Entrance Display</Title>
-        <Text type="secondary" style={{ fontSize: 14 }}>
-          Scan this stable daily Entrance QR wallpaper using your mobile browser to clock in today.
+      {/* Background Neon Aura Effect */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '20%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 500,
+          height: 500,
+          background: 'radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, rgba(0,0,0,0) 70%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Header Info */}
+      <div style={{ textAlign: 'center', zIndex: 2, marginBottom: 24 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', padding: '6px 18px', borderRadius: 30, marginBottom: 12 }}>
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
+          <span style={{ color: '#6ee7b7', fontWeight: 800, fontSize: 13, letterSpacing: 1.2 }}>LIVE ENTRANCE KIOSK</span>
+        </div>
+        <Title level={2} style={{ margin: 0, color: '#ffffff', fontWeight: 900, fontSize: hideExtraUI ? 28 : 32, letterSpacing: -0.5 }}>
+          Experimind Labs Workplace Entrance
+        </Title>
+        <Text style={{ color: '#94a3b8', fontSize: 15, display: 'block', marginTop: 4 }}>
+          Scan this daily Entrance QR code with your smartphone camera to Clock-In
         </Text>
       </div>
 
+      {/* Main Glassmorphic Display Card */}
       <Card
-        styles={{ body: { padding: '28px 36px', textAlign: 'center' } }}
+        styles={{ body: { padding: hideExtraUI ? '28px 24px' : '36px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center' } }}
         style={{
           width: '100%',
-          maxWidth: 520,
-          borderRadius: 24,
-          boxShadow: '0 25px 50px rgba(16, 185, 129, 0.15)',
-          border: '2px solid #a7f3d0',
-          background: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)',
+          maxWidth: 480,
+          borderRadius: 28,
+          background: 'rgba(6, 78, 59, 0.45)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(52, 211, 153, 0.35)',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6), 0 0 35px rgba(16, 185, 129, 0.25)',
+          zIndex: 2,
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <Tag color="green" style={{ marginBottom: 16, fontSize: 14, padding: '6px 18px', borderRadius: 20, fontWeight: 800 }}>
-            <LoginOutlined style={{ marginRight: 8 }} />
-            ENTRANCE CHECK-IN KIOSK
-          </Tag>
-
-          {/* QR Code Display Area */}
-          <div style={{ padding: 24, background: '#fff', borderRadius: 24, boxShadow: '0 12px 30px rgba(0,0,0,0.08)', border: '2px solid #34d399', marginBottom: 16 }}>
-            <QRCode value={checkInPayload} size={260} color="#047857" icon="/favicon.ico" />
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <Tag color="cyan" style={{ fontSize: 12, padding: '4px 12px', borderRadius: 12, fontWeight: 600 }}>
-              ��������� ������� ������� ����� ������� ����� ����� ��� ������� ����� ����� ��� ����� ��� ��� � ������� ����� ����� ��� ����� ��� ��� � ����� ��� ��� � ��� � � ✓ Daily Wallpaper Active • Valid until 11:59 PM Tonight ({todayStr})
-            </Tag>
-          </div>
-
-          {/* Scanner Area */}
-          <div style={{ width: '100%', maxWidth: 500, marginTop: 24 }}>
-            <Tag color="blue" style={{ fontSize: 14, padding: '6px 12px', borderRadius: 20, fontWeight: 600, marginBottom: 8 }}>
-              <CameraOutlined style={{ marginRight: 6 }} /> Live Scanner (Rear Camera)
-            </Tag>
-            <div style={{ position: 'relative', border: '2px dashed #34d399', borderRadius: 16, background: '#f0fdf4', minHeight: 280 }}>
-              {isScanning ? (
-                <Spin tip="Initializing camera..." size="large" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
-              ) : scanError ? (
-                <div style={{ padding: 20, textAlign: 'center', color: '#ef4444' }}>
-                  <CameraOutlined style={{ fontSize: 24, marginBottom: 8 }} />
-                  <div style={{ fontWeight: 600 }}>{scanError}</div>
-                </div>
-              ) : lastScan ? (
-                <div style={{ padding: 20, textAlign: 'center' }}>
-                  <CheckOutlined style={{ fontSize: 24, color: '#10b981', marginBottom: 8 }} />
-                  <div style={{ fontWeight: 600, color: '#0f172a' }}>Last scanned:</div>
-                  <div style={{ wordBreak: 'break-all', fontFamily: 'monospace', background: '#fff', padding: 8, borderRadius: 6, marginTop: 4, border: '1px solid #e5e7eb' }}>
-                    {lastScan}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ padding: 30, textAlign: 'center', color: '#6b7280' }}>
-                  <CameraOutlined style={{ fontSize: 28, marginBottom: 12 }} />
-                  <div>Point tablet Camera at a QR code to scan</div>
-                </div>
-              )}
-            </div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+          <LoginOutlined style={{ fontSize: 20, color: '#34d399' }} />
+          <span style={{ fontSize: 16, fontWeight: 800, color: '#ecfdf5', letterSpacing: 0.5 }}>MORNING CHECK-IN</span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' }}>
-          <div style={{ fontSize: 38, fontWeight: 800, color: '#047857', fontFamily: 'monospace', letterSpacing: 1 }}>
+        {/* High Contrast QR Container */}
+        <div
+          style={{
+            padding: 24,
+            background: '#ffffff',
+            borderRadius: 24,
+            boxShadow: '0 15px 35px rgba(0,0,0,0.3)',
+            border: '4px solid #10b981',
+            marginBottom: 20,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <QRCode value={checkInPayload} size={hideExtraUI ? 240 : 260} color="#022c22" icon="/icon-192.png" />
+        </div>
+
+        {/* Live Security Nonce Badge */}
+        <Tag
+          color="success"
+          style={{
+            fontSize: 12,
+            padding: '5px 14px',
+            borderRadius: 20,
+            fontWeight: 700,
+            border: 'none',
+            background: 'rgba(16, 185, 129, 0.2)',
+            color: '#6ee7b7',
+            marginBottom: 20,
+          }}
+        >
+          ⚡ Daily Security Nonce Active • Valid for Today ({todayStr})
+        </Tag>
+
+        {/* Digital Clock & Date */}
+        <div style={{ textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16, width: '100%' }}>
+          <div style={{ fontSize: 36, fontWeight: 900, color: '#34d399', fontFamily: 'monospace', letterSpacing: 1.5, textShadow: '0 0 15px rgba(52,211,153,0.4)' }}>
             {currentTime.toLocaleTimeString()}
           </div>
-          <Text type="secondary" style={{ fontSize: 14, fontWeight: 600 }}>
+          <div style={{ fontSize: 14, color: '#cbd5e1', marginTop: 2, fontWeight: 600 }}>
             {currentTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </Text>
-
-          <Tag color="blue" style={{ marginTop: 12, fontSize: 12, padding: '4px 14px', borderRadius: 20, fontWeight: 600 }}>
-            ���������� �������� �������� ������ �������� ������ ������ ���� �������� ������ ������ ���� ������ ���� ���� �� �������� ������ ������ ���� ������ ���� ���� �� ������ ���� ���� �� ���� �� �� 📍 Experimind Labs HQ — Entrance Kiosk
-          </Tag>
+          </div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <SafetyCertificateOutlined style={{ color: '#34d399' }} /> 📍 Experimind Labs HQ — Main Entrance Gate
+          </div>
         </div>
       </Card>
 
-      <Space size={12}>
-        <Button type="primary" icon={<FullscreenOutlined />} onClick={toggleFullscreen} style={{ height: 44, borderRadius: 10, fontWeight: 700, background: '#059669', borderColor: '#059669' }}>
-          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Kiosk Mode'}
-        </Button>
-        <Button icon={<PrinterOutlined />} onClick={handlePrint} style={{ height: 44, borderRadius: 10, fontWeight: 700 }}>
-          Print Kiosk Poster
-        </Button>
-      </Space>
-
-      {/* Hidden QR scanner component (we handle UI manually) */}
-      <QrScanner
-        onScanSuccess={handleScanSuccess}
-        onScanError={handleScanError}
-        autoStart
-      />
+      {!hideExtraUI && (
+        <div style={{ marginTop: 24, zIndex: 2 }}>
+          <Button
+            type="primary"
+            icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+            onClick={toggleFullscreen}
+            style={{
+              height: 46,
+              padding: '0 24px',
+              borderRadius: 14,
+              fontWeight: 700,
+              background: '#059669',
+              borderColor: '#10b981',
+              boxShadow: '0 10px 20px rgba(5, 150, 105, 0.4)',
+            }}
+          >
+            {isFullscreen ? 'Exit Fullscreen Mode' : 'Enter Fullscreen Kiosk Mode'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

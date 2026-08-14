@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import CheckInQrKiosk from '../pages/CheckInQrKiosk';
 import CheckOutQrKiosk from '../pages/CheckOutQrKiosk';
-import { SwapOutlined } from '@ant-design/icons';
+import { SwapOutlined, LoginOutlined, LogoutOutlined } from '@ant-design/icons';
 
 const KioskSwipe: React.FC = () => {
   const [activeTab, setActiveTab] = useState<number>(0);
@@ -17,9 +17,9 @@ const KioskSwipe: React.FC = () => {
     const diffX = touchStartX.current - touchEndX;
 
     if (diffX > 50) {
-      setActiveTab(1);
+      setActiveTab(1); // Swipe left -> Exit (1)
     } else if (diffX < -50) {
-      setActiveTab(0);
+      setActiveTab(0); // Swipe right -> Entrance (0)
     }
     touchStartX.current = null;
   };
@@ -33,62 +33,83 @@ const KioskSwipe: React.FC = () => {
         height: '100vh',
         overflow: 'hidden',
         position: 'relative',
-        background: activeTab === 0 ? '#f0fdf4' : '#fef2f2',
-        transition: 'background 0.3s ease',
+        background: '#011713',
       }}
     >
+      {/* Top Floating Glass Navigation Pills */}
       <div
         style={{
           position: 'absolute',
-          top: 16,
+          top: 20,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000,
           display: 'flex',
-          gap: 8,
+          gap: 12,
           alignItems: 'center',
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(16px)',
+          padding: '8px 16px',
+          borderRadius: 30,
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
         }}
       >
         <button
           onClick={() => setActiveTab(0)}
           style={{
             border: 'none',
-            background: activeTab === 0 ? '#16a34a' : 'rgba(0,0,0,0.1)',
-            color: '#fff',
-            padding: '6px 16px',
-            borderRadius: 20,
+            background: activeTab === 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'transparent',
+            color: activeTab === 0 ? '#ffffff' : '#94a3b8',
+            padding: '8px 20px',
+            borderRadius: 22,
             fontWeight: 800,
             fontSize: 13,
             cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: activeTab === 0 ? '0 0 20px rgba(16, 185, 129, 0.5)' : 'none',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
-          🟢 ENTRANCE
+          <LoginOutlined style={{ fontSize: 14 }} />
+          <span>ENTRANCE</span>
         </button>
+
         <SwapOutlined style={{ color: '#64748b', fontSize: 16 }} />
+
         <button
           onClick={() => setActiveTab(1)}
           style={{
             border: 'none',
-            background: activeTab === 1 ? '#dc2626' : 'rgba(0,0,0,0.1)',
-            color: '#fff',
-            padding: '6px 16px',
-            borderRadius: 20,
+            background: activeTab === 1 ? 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)' : 'transparent',
+            color: activeTab === 1 ? '#ffffff' : '#94a3b8',
+            padding: '8px 20px',
+            borderRadius: 22,
             fontWeight: 800,
             fontSize: 13,
             cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: activeTab === 1 ? '0 0 20px rgba(239, 68, 68, 0.5)' : 'none',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
-          🔴 EXIT
+          <LogoutOutlined style={{ fontSize: 14 }} />
+          <span>EXIT</span>
         </button>
       </div>
 
+      {/* Swipeable View Slider Container */}
       <div
         style={{
           display: 'flex',
           width: '200vw',
           height: '100vh',
           transform: `translateX(-${activeTab * 100}vw)`,
-          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         <div style={{ width: '100vw', height: '100vh' }}>
