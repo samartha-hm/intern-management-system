@@ -1,11 +1,27 @@
 import React, { useState, useRef } from 'react';
 import CheckInQrKiosk from '../pages/CheckInQrKiosk';
 import CheckOutQrKiosk from '../pages/CheckOutQrKiosk';
-import { SwapOutlined, LoginOutlined, LogoutOutlined } from '@ant-design/icons';
+import { SwapOutlined, LoginOutlined, LogoutOutlined, PoweroffOutlined } from '@ant-design/icons';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { message } from 'antd';
 
 const KioskSwipe: React.FC = () => {
   const [activeTab, setActiveTab] = useState<number>(0);
   const touchStartX = useRef<number | null>(null);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      message.success('Kiosk session ended. Logged out successfully.');
+      navigate('/login', { replace: true });
+    } catch {
+      localStorage.clear();
+      window.location.href = '/login';
+    }
+  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -45,14 +61,14 @@ const KioskSwipe: React.FC = () => {
           transform: 'translateX(-50%)',
           zIndex: 1000,
           display: 'flex',
-          gap: 12,
+          gap: 10,
           alignItems: 'center',
-          background: 'rgba(15, 23, 42, 0.75)',
+          background: 'rgba(15, 23, 42, 0.85)',
           backdropFilter: 'blur(16px)',
           padding: '8px 16px',
           borderRadius: 30,
           border: '1px solid rgba(255, 255, 255, 0.15)',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
         }}
       >
         <button
@@ -61,14 +77,14 @@ const KioskSwipe: React.FC = () => {
             border: 'none',
             background: activeTab === 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'transparent',
             color: activeTab === 0 ? '#ffffff' : '#94a3b8',
-            padding: '8px 20px',
+            padding: '8px 18px',
             borderRadius: 22,
             fontWeight: 800,
             fontSize: 13,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: 6,
             boxShadow: activeTab === 0 ? '0 0 20px rgba(16, 185, 129, 0.5)' : 'none',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
@@ -77,7 +93,7 @@ const KioskSwipe: React.FC = () => {
           <span>ENTRANCE</span>
         </button>
 
-        <SwapOutlined style={{ color: '#64748b', fontSize: 16 }} />
+        <SwapOutlined style={{ color: '#64748b', fontSize: 14 }} />
 
         <button
           onClick={() => setActiveTab(1)}
@@ -85,20 +101,44 @@ const KioskSwipe: React.FC = () => {
             border: 'none',
             background: activeTab === 1 ? 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)' : 'transparent',
             color: activeTab === 1 ? '#ffffff' : '#94a3b8',
-            padding: '8px 20px',
+            padding: '8px 18px',
             borderRadius: 22,
             fontWeight: 800,
             fontSize: 13,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: 6,
             boxShadow: activeTab === 1 ? '0 0 20px rgba(239, 68, 68, 0.5)' : 'none',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           <LogoutOutlined style={{ fontSize: 14 }} />
           <span>EXIT</span>
+        </button>
+
+        <div style={{ width: 1, height: 20, background: 'rgba(255, 255, 255, 0.15)', margin: '0 4px' }} />
+
+        <button
+          onClick={handleLogout}
+          title="Exit Kiosk & Logout"
+          style={{
+            background: 'rgba(239, 68, 68, 0.15)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: '#fca5a5',
+            padding: '8px 16px',
+            borderRadius: 22,
+            fontWeight: 800,
+            fontSize: 12,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            transition: 'all 0.3s ease',
+          }}
+        >
+          <PoweroffOutlined style={{ fontSize: 13, color: '#ef4444' }} />
+          <span>LOGOUT</span>
         </button>
       </div>
 
