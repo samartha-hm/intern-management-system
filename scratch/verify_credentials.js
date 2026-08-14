@@ -24,6 +24,7 @@ async function verifyAll() {
   await checkAccount('mentor@experimindlabs.com', 'password123');
   await checkAccount('hr@experimindlabs.com', 'password123');
   await checkAccount('intern@experimindlabs.com', 'password123');
+  await checkAccount('kiosk@experimindlabs.com', 'EXP@123labs');
 }
 
 verifyAll();

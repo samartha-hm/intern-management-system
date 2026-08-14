@@ -54,8 +54,9 @@ self.addEventListener('fetch', (event) => {
             return cachedResponse;
           }
           if (event.request.headers.get('accept')?.includes('text/html')) {
-            return caches.match('/index.html');
+            return caches.match('/index.html').then((indexMatch) => indexMatch || new Response('Offline', { status: 503 }));
           }
+          return new Response('Offline asset unavailable', { status: 503, statusText: 'Service Unavailable' });
         });
       })
   );

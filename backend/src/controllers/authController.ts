@@ -139,9 +139,42 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const normalizedEmail = email.trim().toLowerCase();
 
   // Check for user email (case-insensitive)
-  const user = await prisma.user.findFirst({
+  let user = await prisma.user.findFirst({
     where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
   });
+
+  // Auto-seed default system accounts on demand if unseeded on cloud database
+  if (!user) {
+    const defaultAccounts: Record<string, { pass: string; firstName: string; lastName: string; role: any; department: string; position: string }> = {
+      'admin@experimindlabs.com': { pass: 'password123', firstName: 'Admin', lastName: 'User', role: 'ADMIN', department: 'Management', position: 'System Administrator' },
+      'hr@experimindlabs.com': { pass: 'password123', firstName: 'HR', lastName: 'Manager', role: 'HR', department: 'Human Resources', position: 'HR Lead' },
+      'mentor@experimindlabs.com': { pass: 'password123', firstName: 'Jane', lastName: 'Smith', role: 'MENTOR', department: 'Engineering', position: 'Senior Software Engineer' },
+      'intern@experimindlabs.com': { pass: 'password123', firstName: 'John', lastName: 'Doe', role: 'INTERN', department: 'Engineering', position: 'Software Engineering Intern' },
+      'kiosk@experimindlabs.com': { pass: 'EXP@123labs', firstName: 'Tablet', lastName: 'Kiosk', role: 'KIOSK', department: 'Operations', position: 'Attendance Kiosk' },
+    };
+
+    const defaultMeta = defaultAccounts[normalizedEmail];
+    if (defaultMeta && password === defaultMeta.pass) {
+      try {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(defaultMeta.pass, salt);
+        user = await prisma.user.create({
+          data: {
+            email: normalizedEmail,
+            password: hashedPassword,
+            firstName: defaultMeta.firstName,
+            lastName: defaultMeta.lastName,
+            role: defaultMeta.role,
+            department: defaultMeta.department,
+            position: defaultMeta.position,
+            isActive: true,
+          },
+        });
+      } catch (err) {
+        console.warn('[AUTO SEED WARN]', err);
+      }
+    }
+  }
 
   if (!user) {
     res.status(401);
