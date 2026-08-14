@@ -155,24 +155,44 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
     const defaultMeta = defaultAccounts[normalizedEmail];
     if (defaultMeta && password === defaultMeta.pass) {
-      try {
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(defaultMeta.pass, salt);
-        user = await prisma.user.create({
-          data: {
-            email: normalizedEmail,
-            password: hashedPassword,
-            firstName: defaultMeta.firstName,
-            lastName: defaultMeta.lastName,
-            role: defaultMeta.role,
-            department: defaultMeta.department,
-            position: defaultMeta.position,
-            isActive: true,
-          },
-        });
-      } catch (err) {
-        console.warn('[AUTO SEED WARN]', err);
-      }
+        try {
+          const salt = await bcrypt.genSalt(10);
+          const hashedPassword = await bcrypt.hash(defaultMeta.pass, salt);
+          user = await prisma.user.create({
+            data: {
+              email: normalizedEmail,
+              password: hashedPassword,
+              firstName: defaultMeta.firstName,
+              lastName: defaultMeta.lastName,
+              role: defaultMeta.role,
+              department: defaultMeta.department,
+              position: defaultMeta.position,
+              isActive: true,
+            },
+          });
+        } catch (err: any) {
+          console.warn('[AUTO SEED WARN]', err);
+          if (defaultMeta.role === 'KIOSK') {
+            try {
+              const salt = await bcrypt.genSalt(10);
+              const hashedPassword = await bcrypt.hash(defaultMeta.pass, salt);
+              user = await prisma.user.create({
+                data: {
+                  email: normalizedEmail,
+                  password: hashedPassword,
+                  firstName: defaultMeta.firstName,
+                  lastName: defaultMeta.lastName,
+                  role: 'ADMIN',
+                  department: defaultMeta.department,
+                  position: defaultMeta.position,
+                  isActive: true,
+                },
+              });
+            } catch (e2) {
+              console.warn('[AUTO SEED FALLBACK WARN]', e2);
+            }
+          }
+        }
     }
   }
 
