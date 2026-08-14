@@ -11,7 +11,10 @@ const Login: React.FC = () => {
   const { loading, error, login } = useAuth();
   const navigate = useNavigate();
 
-  const getRoleDefaultPath = (role?: string) => {
+  const getRoleDefaultPath = (role: string, email?: string) => {
+    if (role === 'KIOSK' || email?.toLowerCase() === 'kiosk@experimindlabs.com') {
+      return '/kiosk-swipe';
+    }
     switch (role) {
       case 'ADMIN':
       case 'HR':
@@ -29,7 +32,8 @@ const Login: React.FC = () => {
       const res: any = await login(values.email, values.password);
       message.success('Welcome back! Successfully logged in.');
       const userRole = res?.user?.role || 'INTERN';
-      navigate(getRoleDefaultPath(userRole), { replace: true });
+      const userEmail = res?.user?.email || values.email;
+      navigate(getRoleDefaultPath(userRole, userEmail), { replace: true });
     } catch (err: any) {
       message.error(err.message || 'Login failed. Please check your credentials.');
     }

@@ -118,8 +118,9 @@ const App: React.FC = () => {
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
 
-  // If user is KIOSK role, show the swipe kiosk interface
-  if (currentUser?.role === 'KIOSK') {
+  // If user is KIOSK role or kiosk@experimindlabs.com, show the swipe kiosk interface
+  const isKioskAccount = currentUser?.role === 'KIOSK' || currentUser?.email?.toLowerCase() === 'kiosk@experimindlabs.com';
+  if (isKioskAccount) {
     return <KioskSwipe />;
   }
 

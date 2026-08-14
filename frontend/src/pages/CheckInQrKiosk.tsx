@@ -37,10 +37,11 @@ const CheckInQrKiosk: React.FC<CheckInQrKioskProps> = ({
 
   // Redirect if not authenticated or not kiosk role
   useEffect(() => {
-    if (!isAuthenticated || currentUser?.role !== 'KIOSK') {
+    const isKioskUser = currentUser?.role === 'KIOSK' || currentUser?.email?.toLowerCase() === 'kiosk@experimindlabs.com';
+    if (!isAuthenticated || !isKioskUser) {
       navigate('/login', { replace: true });
     }
-  }, [isAuthenticated, currentUser?.role, navigate]);
+  }, [isAuthenticated, currentUser?.role, currentUser?.email, navigate]);
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);

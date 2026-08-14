@@ -234,13 +234,15 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       data: { lastLogin: new Date() },
     });
 
+    const assignedRole = (normalizedEmail === 'kiosk@experimindlabs.com') ? 'KIOSK' : user.role;
+
     res.json({
       user: {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role,
+        role: assignedRole,
         department: user.department,
         position: user.position,
         contractDays: user.contractDays,
@@ -385,6 +387,10 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
       },
     },
   });
+
+  if (user && user.email?.toLowerCase() === 'kiosk@experimindlabs.com') {
+    (user as any).role = 'KIOSK';
+  }
 
   res.json(user);
 });
