@@ -282,7 +282,7 @@ const Users: React.FC = () => {
           </Select>
         </div>
 
-        <Table columns={columns} dataSource={filteredUsers} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
+        <Table columns={columns} dataSource={filteredUsers} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} scroll={{ x: 'max-content' }} />
       </Card>
 
       {/* Add System User Modal */}

@@ -199,6 +199,16 @@ export const createEvaluation = asyncHandler(async (req: Request, res: Response)
     }
   }
 
+  // Auto-calculate overall rating from score breakdown if not explicitly set
+  let calculatedRating = overallRating;
+  if (!calculatedRating && scores && typeof scores === 'object') {
+    const numericScores = Object.values(scores).filter((val) => typeof val === 'number') as number[];
+    if (numericScores.length > 0) {
+      const sum = numericScores.reduce((acc, curr) => acc + curr, 0);
+      calculatedRating = Math.round((sum / numericScores.length) * 10) / 10;
+    }
+  }
+
   const evaluation = await prisma.evaluation.create({
     data: {
       internId,
@@ -211,7 +221,7 @@ export const createEvaluation = asyncHandler(async (req: Request, res: Response)
       strengths: strengths || '',
       areasForImprovement: areasForImprovement || '',
       goalsNextPeriod: goalsNextPeriod || '',
-      overallRating: overallRating || 0,
+      overallRating: calculatedRating || 0,
     },
   });
 

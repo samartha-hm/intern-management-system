@@ -633,7 +633,7 @@ const Attendance: React.FC = () => {
 
       {/* History Table */}
       <Card title="Attendance Logs History" styles={{ body: { padding: 20 } }}>
-        <Table columns={columns} dataSource={records} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
+        <Table columns={columns} dataSource={records} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} scroll={{ x: 'max-content' }} />
       </Card>
 
       {/* Enhanced Multi-Mode HTML5 Browser Camera & Image QR Scanner Modal */}

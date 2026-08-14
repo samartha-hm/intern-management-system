@@ -117,8 +117,8 @@ const WorkDiary: React.FC = () => {
         style={{ borderRadius: 10 }}
       />
 
-      <Card title="Submitted Work Summaries & Mentor Feedback" styles={{ body: { padding: 20 } }}>
-        <Table columns={columns} dataSource={diaries} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
+      <Card title="Submitted Work Diaries Log" styles={{ body: { padding: 20 } }}>
+        <Table columns={columns} dataSource={diaries} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} scroll={{ x: 'max-content' }} />
       </Card>
     </div>
   );

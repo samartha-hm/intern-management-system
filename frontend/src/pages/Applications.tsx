@@ -174,7 +174,7 @@ const Applications: React.FC = () => {
           </Select>
         </div>
 
-        <Table columns={columns} dataSource={filteredData} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
+        <Table columns={columns} dataSource={filteredData} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} scroll={{ x: 'max-content' }} />
       </Card>
 
       {/* Review Drawer */}

@@ -182,8 +182,8 @@ const Reports: React.FC = () => {
         </div>
       </Card>
 
-      <Card title="Monthly Attendance & Logged Hours Compliance Table">
-        <Table columns={columns} dataSource={reportData} rowKey="key" loading={loading} pagination={{ pageSize: 8 }} />
+      <Card title="Generated Report Logs" styles={{ body: { padding: 20 } }}>
+        <Table columns={columns} dataSource={reportData} rowKey="key" loading={loading} pagination={{ pageSize: 8 }} scroll={{ x: 'max-content' }} />
       </Card>
     </div>
   );
