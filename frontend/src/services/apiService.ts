@@ -4,12 +4,24 @@
  * Provides authenticated HTTP methods with automatic JWT token injection,
  * 401 auto-logout, and consistent error handling.
  */
-// Build base URL from environment
-const rawApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-let BASE_URL = rawApiUrl.trim().replace(/\/+$/, '');
-if (!BASE_URL.endsWith('/api')) {
-  BASE_URL = `${BASE_URL}/api`;
-}
+// Build base URL dynamically based on current browser environment
+const getInitialBaseUrl = (): string => {
+  const envUrl = process.env.REACT_APP_API_URL;
+
+  // On non-localhost browser environments (like Vercel production), always target the production backend URL
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return 'https://experimindlabsimsbackend.vercel.app/api';
+  }
+
+  if (envUrl && envUrl.trim()) {
+    const trimmed = envUrl.trim().replace(/\/+$/, '');
+    return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+  }
+
+  return 'http://localhost:5000/api';
+};
+
+let BASE_URL = getInitialBaseUrl();
 
 export { BASE_URL };
 
@@ -187,12 +199,29 @@ const apiService = {
    * POST request
    */
   async post<T = any>(endpoint: string, body?: any, authenticated: boolean = true): Promise<T> {
-    const response = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
-      method: 'POST',
-      headers: buildHeaders(authenticated),
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    return handleResponse<T>(response);
+    try {
+      const response = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: buildHeaders(authenticated),
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      return await handleResponse<T>(response);
+    } catch (err: any) {
+      if (err?.name === 'TypeError' || err?.message?.includes('Failed to fetch')) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        try {
+          const retryResponse = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
+            method: 'POST',
+            headers: buildHeaders(authenticated),
+            body: body ? JSON.stringify(body) : undefined,
+          });
+          return await handleResponse<T>(retryResponse);
+        } catch (retryErr: any) {
+          throw new ApiError('Unable to connect to server. Please check your internet connection and try again.', 0);
+        }
+      }
+      throw err;
+    }
   },
 
   /**
